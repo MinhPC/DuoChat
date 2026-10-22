@@ -45,6 +45,7 @@ import {
 } from './profile'
 import { createLock, isValidPin, retryDelayMs, verifyPin } from './lock'
 import type { Logger } from './logger'
+import { loadRetryDelayMs, recordCrash } from './retry'
 import { applyPermissionHandlers } from './permissions'
 import { buildUserAgent, partitionFor, ZALO_SERVICE } from './service'
 import { isLoginPage } from './session'
@@ -82,6 +83,9 @@ export class AccountManager {
   private pinFailures = 0
   private retryUntil = 0
   private readonly needsLogin = new Map<string, boolean>()
+  private readonly loadAttempts = new Map<string, number>()
+  private readonly retryTimers = new Map<string, NodeJS.Timeout>()
+  private readonly crashes = new Map<string, number[]>()
   private readonly profileSyncing = new Set<string>()
   private readonly lastAutoSync = new Map<string, number>()
   // Account vừa thêm trong phiên này: lần đọc hồ sơ đầu tiên được thay tên người dùng đã nhập.
@@ -171,17 +175,30 @@ export class AccountManager {
     wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
       if (isMainFrame) this.onNavigated(account.id, url)
     })
+    wc.on('did-finish-load', () => this.loadAttempts.delete(account.id))
     wc.on('did-fail-load', (_e, code, _desc, _url, isMainFrame) => {
-      // -3 = bị hủy do điều hướng khác. Mất mạng thì thử lại thay vì để khung trắng.
-      if (isMainFrame && code !== -3) {
-        this.log.info('view_load_failed', { account: account.id, code })
+      // -3 = bị hủy do điều hướng khác. Mất mạng thì thử lại có backoff thay vì để khung trắng.
+      if (!isMainFrame || code === -3) return
+      const attempt = this.loadAttempts.get(account.id) ?? 0
+      this.loadAttempts.set(account.id, attempt + 1)
+      this.log.info('view_load_failed', { account: account.id, code, attempt })
+      clearTimeout(this.retryTimers.get(account.id))
+      this.retryTimers.set(
+        account.id,
         setTimeout(() => {
           if (!wc.isDestroyed()) void wc.loadURL(ZALO_SERVICE.url)
-        }, 5000)
-      }
+        }, loadRetryDelayMs(attempt)),
+      )
     })
     wc.on('render-process-gone', (_e, details) => {
-      this.log.info('render_process_gone', { account: account.id, reason: details.reason })
+      const r = recordCrash(this.crashes.get(account.id) ?? [], Date.now())
+      this.crashes.set(account.id, r.history)
+      this.log.info('render_process_gone', {
+        account: account.id,
+        reason: details.reason,
+        reload: r.reload,
+      })
+      if (!r.reload) return
       setTimeout(() => {
         if (!wc.isDestroyed()) wc.reload()
       }, 1000)
@@ -215,6 +232,10 @@ export class AccountManager {
     this.pendingFirstSync.delete(id)
     this.lastAutoSync.delete(id)
     this.forgetLoggedIn(id)
+    clearTimeout(this.retryTimers.get(id))
+    this.retryTimers.delete(id)
+    this.loadAttempts.delete(id)
+    this.crashes.delete(id)
     this.win.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
   }
