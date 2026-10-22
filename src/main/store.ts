@@ -2,9 +2,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   ACCOUNT_PALETTE,
+  ACCOUNT_SOUNDS,
   MAX_ZOOM,
   MIN_ZOOM,
   type Account,
+  type AccountSound,
   type LayoutSettings,
   type Settings,
 } from '../shared/types'
@@ -28,6 +30,7 @@ export function defaultSettings(): Settings {
     startMinimized: true,
     minimizeToTray: true,
     zoomFactor: 1,
+    notifyPreview: false,
     window: { width: 1280, height: 800, maximized: false },
     pendingPartitionCleanup: [],
   }
@@ -90,6 +93,9 @@ function normalizeAccounts(input: unknown): Account[] {
             : ACCOUNT_PALETTE[0],
         order: num(a.order, idx),
         muted: bool(a.muted, false),
+        sound: (ACCOUNT_SOUNDS as readonly unknown[]).includes(a.sound)
+          ? (a.sound as AccountSound)
+          : 'default',
         createdAt: str(a.createdAt) ?? new Date(0).toISOString(),
       },
     })
@@ -149,6 +155,7 @@ export function normalizeSettings(input: Json): Settings {
     startWithWindows: bool(input.startWithWindows, d.startWithWindows),
     startMinimized: bool(input.startMinimized, d.startMinimized),
     minimizeToTray: bool(input.minimizeToTray, d.minimizeToTray),
+    notifyPreview: bool(input.notifyPreview, d.notifyPreview),
     zoomFactor: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, num(input.zoomFactor, d.zoomFactor))),
     window: {
       x: typeof w.x === 'number' ? w.x : undefined,

@@ -18,7 +18,10 @@ export function SettingsDialog({ prefs, onClose }: Props): React.JSX.Element {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const check = (key: 'startWithWindows' | 'startMinimized' | 'minimizeToTray', label: string) => (
+  const check = (
+    key: 'startWithWindows' | 'startMinimized' | 'minimizeToTray' | 'notifyPreview',
+    label: string,
+  ) => (
     <label className="check">
       <input
         type="checkbox"
@@ -36,6 +39,7 @@ export function SettingsDialog({ prefs, onClose }: Props): React.JSX.Element {
         {check('startWithWindows', t.startWithWindows)}
         {check('startMinimized', t.startMinimized)}
         {check('minimizeToTray', t.minimizeToTray)}
+        {check('notifyPreview', t.notifyPreview)}
         <label>
           {t.zoom}: {Math.round(prefs.zoomFactor * 100)}%
           <input

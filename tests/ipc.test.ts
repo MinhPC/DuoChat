@@ -20,6 +20,14 @@ describe('hợp đồng IPC', () => {
     expect(src).not.toMatch(/ipcRenderer\s*[,}]\s*$/m)
   })
 
+  it('preload toast hardcode đúng các kênh toast và không import src/shared', () => {
+    const src = read('src/preload/toast.ts')
+    for (const ch of [IPC.toastData, IPC.toastClick, IPC.toastDismiss, IPC.toastHover]) {
+      expect(src).toContain(`'${ch}'`)
+    }
+    expect(src).not.toMatch(/from '\.\.\/shared/)
+  })
+
   it('tên kênh không trùng nhau', () => {
     const values = Object.values(IPC)
     expect(new Set(values).size).toBe(values.length)

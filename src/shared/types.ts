@@ -1,9 +1,13 @@
+export const ACCOUNT_SOUNDS = ['default', 'soft', 'off'] as const
+export type AccountSound = (typeof ACCOUNT_SOUNDS)[number]
+
 export interface Account {
   id: string // uuid, cũng là hậu tố partition
   name: string
   color: string // một màu trong ACCOUNT_PALETTE
   order: number
   muted: boolean // tắt thông báo (badge vẫn đếm)
+  sound: AccountSound // âm báo riêng của account
   createdAt: string // ISO
 }
 
@@ -35,6 +39,7 @@ export interface Settings {
   startMinimized: boolean // khi tự khởi động cùng Windows
   minimizeToTray: boolean // bấm X → ẩn xuống tray
   zoomFactor: number // 0.5–2.0, áp cho mọi view Zalo
+  notifyPreview: boolean // hiện nội dung tin trong thông báo (mặc định ẩn để riêng tư)
   window: WindowState
   // id account đã xóa, thư mục partition sẽ được xóa hẳn ở lần khởi động sau (mục 2.5.4)
   pendingPartitionCleanup: string[]

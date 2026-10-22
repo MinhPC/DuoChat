@@ -9,6 +9,7 @@ import { registerIpc } from './ipc'
 import { setupNotifications } from './notifications'
 import { attachShortcuts } from './shortcuts'
 import { SettingsStore } from './store'
+import { ToastManager } from './toast'
 import { AppTray } from './tray'
 import { createMainWindow } from './window'
 
@@ -82,6 +83,7 @@ function start(): void {
     app.quit()
   }
 
+  const toasts = new ToastManager(openAccount)
   const tray = new AppTray({
     onToggleWindow: () => (win.isVisible() && !win.isMinimized() ? win.hide() : showWindow()),
     onOpenWindow: showWindow,
@@ -101,6 +103,8 @@ function start(): void {
         .get()
         .accounts.map((a) => ({ id: a.id, name: a.name, unread: manager.unreadFor(a.id) })),
     )
+    // Người dùng đã mở account đó thì thẻ thông báo của nó không còn ý nghĩa.
+    for (const a of store.get().accounts) if (manager.isSeen(a.id)) toasts.dismiss(a.id)
     if (total !== lastTotal) {
       lastTotal = total
       updateTaskbarBadge(win, total)
@@ -109,7 +113,7 @@ function start(): void {
   manager.onNotice((key) => win.webContents.send(IPC.notice, key))
 
   registerIpc(win, manager, store, applyLoginItem)
-  setupNotifications(manager, openAccount)
+  setupNotifications(manager, toasts, () => store.get().notifyPreview)
   attachShortcuts(win.webContents, isDev, (action) => manager.handleShortcut(action))
 
   // Sidebar chỉ là giao diện của app: không cho điều hướng/mở cửa sổ đi đâu khác.
@@ -143,6 +147,7 @@ function start(): void {
   let flushed = false
   app.on('before-quit', (e) => {
     isQuitting = true
+    toasts.dismissAll()
     if (flushed) return
     e.preventDefault()
     void Promise.race([manager.flushAll(), new Promise((r) => setTimeout(r, 3000))]).finally(() => {

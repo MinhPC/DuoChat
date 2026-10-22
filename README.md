@@ -46,8 +46,11 @@ Các phím khác đi thẳng vào Zalo.
 
 ### Thông báo, badge, khay hệ thống
 
-- Thông báo hiện dạng `[Tên tài khoản] tiêu đề`; bấm vào sẽ mở đúng tài khoản. Tài khoản đã tắt thông báo hoặc đang
-  hiển thị (khi cửa sổ đang focus) thì không hiện toast, nhưng số chưa đọc vẫn được đếm.
+- Thông báo là thẻ nhỏ riêng của DuoChat ở góc dưới-phải màn hình (không cướp focus): avatar màu và tên tài khoản, số tin mới.
+  Nhiều tin cùng tài khoản được gom vào một thẻ; bấm thẻ để mở đúng tài khoản, rê chuột vào để giữ thẻ lại.
+- **Mặc định ẩn nội dung tin** (chỉ hiện "Có tin nhắn mới"); bật "Hiện nội dung tin nhắn trong thông báo" trong Cài đặt nếu muốn.
+- Âm báo chọn theo từng tài khoản (chuột phải avatar → Âm báo: Mặc định / Nhẹ / Không âm).
+- Tài khoản đã tắt thông báo hoặc đang hiển thị (khi cửa sổ đang focus) thì không hiện thẻ, nhưng số chưa đọc vẫn được đếm.
 - Số chưa đọc hiện trên avatar, trên icon taskbar và trong tooltip khay hệ thống.
 - Bấm X chỉ ẩn xuống khay (có thể tắt trong Cài đặt). Chọn **Thoát** ở menu khay để thoát thật.
 

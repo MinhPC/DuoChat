@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DuoChat</title>
+    <link rel="stylesheet" href="./styles/toast.css" />
+  </head>
+  <body>
+    <div id="card" class="card" role="status" hidden>
+      <div id="avatar" class="avatar"></div>
+      <div class="text">
+        <div id="account" class="account"></div>
+        <div id="title" class="title"></div>
+        <div id="body" class="body"></div>
+      </div>
+      <div id="count" class="count" hidden></div>
+      <button id="close" class="close" aria-label="Đóng">×</button>
+    </div>
+    <script type="module" src="./toast.ts"></script>
+  </body>
+</html>

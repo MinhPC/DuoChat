@@ -1,7 +1,7 @@
 import { dialog, ipcMain, Menu, type BrowserWindow } from 'electron'
 import { IPC, type InvokeMap } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
-import { ACCOUNT_PALETTE } from '../shared/types'
+import { ACCOUNT_PALETTE, ACCOUNT_SOUNDS } from '../shared/types'
 import type { AccountManager } from './accounts'
 import type { SettingsStore } from './store'
 
@@ -35,6 +35,15 @@ export function registerIpc(
           type: 'radio' as const,
           checked: account.color === color,
           click: () => manager.patchAccount(id, { color }),
+        })),
+      },
+      {
+        label: t.sound,
+        submenu: ACCOUNT_SOUNDS.map((sound) => ({
+          label: vi.sounds[sound],
+          type: 'radio' as const,
+          checked: account.sound === sound,
+          click: () => manager.patchAccount(id, { sound }),
         })),
       },
       {
@@ -123,6 +132,8 @@ export function registerIpc(
           typeof prefs.startMinimized === 'boolean' ? prefs.startMinimized : s.startMinimized,
         minimizeToTray:
           typeof prefs.minimizeToTray === 'boolean' ? prefs.minimizeToTray : s.minimizeToTray,
+        notifyPreview:
+          typeof prefs.notifyPreview === 'boolean' ? prefs.notifyPreview : s.notifyPreview,
       }))
       if (typeof prefs.zoomFactor === 'number' && Number.isFinite(prefs.zoomFactor)) {
         manager.setZoom(prefs.zoomFactor)

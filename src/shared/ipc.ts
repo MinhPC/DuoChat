@@ -18,11 +18,16 @@ export const IPC = {
   setDragging: 'ui:dragging',
   updatePrefs: 'settings:update',
   notify: 'duochat:notify',
+  // Kênh của cửa sổ toast. Preload toast hardcode các chuỗi này (có test đối chiếu).
+  toastData: 'toast:data',
+  toastClick: 'toast:click',
+  toastDismiss: 'toast:dismiss',
+  toastHover: 'toast:hover',
 } as const
 
 export type Prefs = Pick<
   Settings,
-  'startWithWindows' | 'startMinimized' | 'minimizeToTray' | 'zoomFactor'
+  'startWithWindows' | 'startMinimized' | 'minimizeToTray' | 'zoomFactor' | 'notifyPreview'
 >
 
 export type NoticeKey = 'narrowScreen'

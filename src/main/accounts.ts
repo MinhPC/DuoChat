@@ -227,6 +227,7 @@ export class AccountManager {
       startMinimized: s.startMinimized,
       minimizeToTray: s.minimizeToTray,
       zoomFactor: s.zoomFactor,
+      notifyPreview: s.notifyPreview,
     }
     return {
       accounts: s.accounts,
@@ -400,6 +401,7 @@ export class AccountManager {
       color: (ACCOUNT_PALETTE as readonly string[]).includes(color) ? color : ACCOUNT_PALETTE[0],
       order: s.accounts.length,
       muted: false,
+      sound: 'default',
       createdAt: new Date().toISOString(),
     }
     this.store.update((d) => ({ ...d, accounts: [...d.accounts, account] }))
@@ -408,7 +410,10 @@ export class AccountManager {
     return account
   }
 
-  patchAccount(id: string, patch: Partial<Pick<Account, 'name' | 'color' | 'muted'>>): void {
+  patchAccount(
+    id: string,
+    patch: Partial<Pick<Account, 'name' | 'color' | 'muted' | 'sound'>>,
+  ): void {
     this.store.update((s) => ({
       ...s,
       accounts: s.accounts.map((a) => {
@@ -418,6 +423,7 @@ export class AccountManager {
           next.name = patch.name.trim().slice(0, MAX_NAME) || a.name
         if (typeof patch.color === 'string') next.color = patch.color
         if (typeof patch.muted === 'boolean') next.muted = patch.muted
+        if (patch.sound) next.sound = patch.sound
         return next
       }),
     }))

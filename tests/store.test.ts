@@ -19,6 +19,7 @@ const acc = (id: string, order: number, extra = {}) => ({
   color: '#2563eb',
   order,
   muted: false,
+  sound: 'default' as const,
   createdAt: '2026-01-01T00:00:00.000Z',
   ...extra,
 })

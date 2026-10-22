@@ -177,6 +177,28 @@ try {
   check('thông báo từ view ẩn tăng badge fallback đúng account', s.unread[A.id] === 1, JSON.stringify(s.unread))
   check('thông báo từ view đang hiển thị (cửa sổ focus) không tăng badge', s.unread[B.id] === 0 || s.unread[B.id] === undefined, JSON.stringify(s.unread))
   check('tổng chưa đọc khớp', s.totalUnread === 1, String(s.totalUnread))
+
+  // ---------- toast riêng của DuoChat ----------
+  const toastTargets = await waitFor(async () => {
+    const t = (await targets()).filter((x) => x.type === 'page' && x.url.includes('toast.html'))
+    return t.length ? t : null
+  }, 10000, 'cửa sổ toast')
+  check('có toast cho account ở nền (mỗi account một thẻ)', toastTargets.length >= 1, `${toastTargets.length} toast`)
+  const tc = await connect(toastTargets[0].webSocketDebuggerUrl)
+  await sleep(500)
+  const toastText = await evalIn(tc, 'document.getElementById("card").innerText')
+  console.log('INFO  nội dung toast =', JSON.stringify(toastText))
+  check('toast hiện tên account, chữ cái avatar và "Có tin nhắn mới"', /Có tin nhắn mới/.test(toastText) && /(Cá nhân|Công ty)/.test(toastText))
+  check('toast mặc định ẨN nội dung tin (không lộ "Xin chào" / tên người gửi)', !/Xin chào|Nam/.test(toastText), toastText)
+  // gom tin: bắn thêm 2 thông báo từ view ẩn → vẫn một thẻ, số đếm tăng
+  const hiddenIdx = s.unread[A.id] > 0 ? 1 : 0
+  for (let i = 0; i < 2; i++) await evalIn(vc[hiddenIdx], `new Notification('Nam', { body: 'Tin tiếp' }); 1`)
+  await sleep(800)
+  const same = (await targets()).filter((x) => x.type === 'page' && x.url.includes('toast.html'))
+  check('nhiều tin cùng account gom vào cùng một thẻ', same.length === toastTargets.length, `${same.length} thẻ`)
+  const merged = await evalIn(tc, 'document.getElementById("card").innerText')
+  check('thẻ gom hiện "3 tin nhắn mới" và số đếm 3', /3 tin nhắn mới/.test(merged) && /\b3\b/.test(merged), JSON.stringify(merged))
+  tc.close()
   void aIdx
 
   // ---------- 5. split, layout, bounds thật ----------
