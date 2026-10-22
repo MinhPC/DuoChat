@@ -1,6 +1,6 @@
 {
   "name": "duochat",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DuoChat - vỏ bọc nhiều tài khoản cho web chat",
   "main": "./out/main/index.js",
   "private": true,
