@@ -43,7 +43,13 @@ export type Prefs = Pick<
   | 'autoUpdate'
 >
 
-export type NoticeKey = 'narrowScreen' | 'updateReady'
+export type NoticeKey =
+  | 'narrowScreen'
+  | 'updateReady'
+  | 'profileNotLoggedIn'
+  | 'profileNotFound'
+  | 'profileDone'
+  | 'profilePartial'
 
 /** Kết quả thao tác dùng PIN. `retryAfterMs` > 0: phải chờ trước khi thử tiếp. */
 export interface PinResult {

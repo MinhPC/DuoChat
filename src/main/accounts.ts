@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import {
   app,
+  nativeImage,
   WebContentsView,
   session,
   type BrowserWindow,
@@ -35,10 +36,11 @@ import {
   visibleAccountIds,
 } from './layoutActions'
 import { attachLinkHandling } from './links'
+import { parseProfile, PROFILE_SCRIPT, toAvatarDataUrl } from './profile'
 import { createLock, isValidPin, retryDelayMs, verifyPin } from './lock'
 import type { Logger } from './logger'
 import { applyPermissionHandlers } from './permissions'
-import { buildUserAgent, partitionFor, ZALO_SERVICE } from './service'
+import { buildUserAgent, isAllowedUrl, partitionFor, ZALO_SERVICE } from './service'
 import { isLoginPage } from './session'
 import { attachShortcuts, type ShortcutAction } from './shortcuts'
 import type { SettingsStore } from './store'
@@ -54,6 +56,8 @@ import {
 const ZOOM_STEP = 0.1
 const MAX_NAME = 40
 const LOGGED_IN_STABLE_MS = 8000
+const AVATAR_SIZE = 96
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 
 /**
  * Giữ một WebContentsView sống cho mỗi account (không destroy khi đổi tab để vẫn nhận tin),
@@ -467,7 +471,9 @@ export class AccountManager {
 
   patchAccount(
     id: string,
-    patch: Partial<Pick<Account, 'name' | 'color' | 'muted' | 'sound' | 'dnd' | 'preview'>>,
+    patch: Partial<Pick<Account, 'name' | 'color' | 'muted' | 'sound' | 'dnd' | 'preview'>> & {
+      avatar?: string | null // null = bỏ ảnh
+    },
   ): void {
     this.store.update((s) => ({
       ...s,
@@ -481,10 +487,59 @@ export class AccountManager {
         if (patch.sound) next.sound = patch.sound
         if (patch.dnd) next.dnd = patch.dnd
         if (patch.preview) next.preview = patch.preview
+        if (patch.avatar === null) delete next.avatar
+        else if (typeof patch.avatar === 'string') next.avatar = patch.avatar
         return next
       }),
     }))
     this.emit()
+  }
+
+  /**
+   * Lấy tên + ảnh đại diện của chính tài khoản đang đăng nhập (CLAUDE.md mục 4.3).
+   * Chỉ gọi khi người dùng bấm nút. Không đọc được thì giữ nguyên dữ liệu hiện có.
+   */
+  async syncProfile(id: string): Promise<void> {
+    const view = this.views.get(id)
+    const wc = view?.webContents
+    if (!wc || wc.isDestroyed()) return
+    const notify = (key: NoticeKey): void => {
+      for (const cb of this.noticeListeners) cb(key)
+    }
+    if (this.needsLogin.get(id)) return notify('profileNotLoggedIn')
+
+    let profile = parseProfile(null)
+    try {
+      profile = parseProfile(await wc.executeJavaScript(PROFILE_SCRIPT))
+    } catch {
+      /* trang đang tải hoặc lỗi: coi như không đọc được */
+    }
+    const avatar = profile.avatarUrl ? await this.fetchAvatar(id, profile.avatarUrl) : null
+    if (!profile.name && !avatar) return notify('profileNotFound')
+
+    this.patchAccount(id, {
+      ...(profile.name ? { name: profile.name } : {}),
+      ...(avatar ? { avatar } : {}),
+    })
+    notify(profile.name && avatar ? 'profileDone' : 'profilePartial')
+  }
+
+  /** Tải ảnh qua session của chính partition, thu nhỏ 96x96, trả data URL PNG (chỉ lưu cục bộ). */
+  private async fetchAvatar(id: string, url: string): Promise<string | null> {
+    try {
+      const res = await session.fromPartition(partitionFor(id)).fetch(url)
+      if (!res.ok || !isAllowedUrl(res.url)) return null // chuyển hướng ra ngoài allowlist thì bỏ
+      if (!(res.headers.get('content-type') ?? '').startsWith('image/')) return null
+      const buf = Buffer.from(await res.arrayBuffer())
+      if (buf.length === 0 || buf.length > MAX_AVATAR_BYTES) return null
+      const img = nativeImage.createFromBuffer(buf)
+      if (img.isEmpty()) return null
+      return toAvatarDataUrl(
+        img.resize({ width: AVATAR_SIZE, height: AVATAR_SIZE, quality: 'best' }).toPNG(),
+      )
+    } catch {
+      return null
+    }
   }
 
   reorder(ids: string[]): void {

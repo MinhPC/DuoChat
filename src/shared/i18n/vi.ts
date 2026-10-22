@@ -70,6 +70,11 @@ export const vi = {
   },
   notice: {
     narrowScreen: 'Màn hình hẹp, Zalo Web có thể bị chật.',
+    profileNotLoggedIn: 'Tài khoản chưa đăng nhập, hãy đăng nhập Zalo trước.',
+    profileNotFound:
+      'Không đọc được hồ sơ từ Zalo Web. Tên và màu vẫn giữ nguyên, bạn có thể tự đặt.',
+    profileDone: 'Đã cập nhật tên và ảnh đại diện từ Zalo.',
+    profilePartial: 'Chỉ đọc được một phần hồ sơ từ Zalo, phần còn lại giữ nguyên.',
     updateReady: 'Đã tải bản cập nhật mới, sẽ được cài khi bạn thoát DuoChat.',
   },
   previewModes: { default: 'Theo cài đặt chung', show: 'Luôn hiện', hide: 'Luôn ẩn' },
@@ -83,6 +88,8 @@ export const vi = {
   colors: ['Xanh dương', 'Xanh lá', 'Đỏ', 'Tím', 'Cam', 'Xanh ngọc', 'Hồng', 'Xám'],
   accountMenu: {
     rename: 'Đổi tên…',
+    syncProfile: 'Lấy tên và ảnh từ Zalo',
+    clearAvatar: 'Bỏ ảnh đại diện',
     color: 'Đổi màu',
     sound: 'Âm báo',
     preview: 'Nội dung tin trong thông báo',

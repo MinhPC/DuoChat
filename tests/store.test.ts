@@ -67,7 +67,7 @@ describe('migrate', () => {
       window: { x: 10, y: 20, width: 900, height: 700, maximized: true },
     }
     const s = migrate(v1)
-    expect(s.schemaVersion).toBe(2)
+    expect(s.schemaVersion).toBe(3)
     expect(s.accounts.map((a) => a.muted)).toEqual([false, false])
     expect(s.layout.mode).toBe('single')
     expect(s.layout.activeAccountId).toBe(B)
@@ -82,7 +82,7 @@ describe('migrate', () => {
 
   it('thiếu schemaVersion được coi là v1', () => {
     const s = migrate({ accounts: [acc(A, 0)], activeAccountId: A })
-    expect(s.schemaVersion).toBe(2)
+    expect(s.schemaVersion).toBe(3)
     expect(s.layout.activeAccountId).toBe(A)
   })
 

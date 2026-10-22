@@ -32,9 +32,13 @@ export function AccountItem(p: Props): React.JSX.Element {
       onDragOver={(e) => e.preventDefault()}
       onDrop={p.onDrop}
     >
-      <span className="avatar" style={{ background: account.color }}>
-        {initial}
-      </span>
+      {account.avatar ? (
+        <img className="avatar" src={account.avatar} alt="" draggable={false} />
+      ) : (
+        <span className="avatar" style={{ background: account.color }}>
+          {initial}
+        </span>
+      )}
       {p.unread > 0 && <span className="badge">{p.unread > 99 ? '99+' : p.unread}</span>}
       {account.muted && <span className="muted-mark">🔕</span>}
       {p.needsLogin && <span className="login-mark">!</span>}

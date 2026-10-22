@@ -97,6 +97,10 @@ button {
   color: #fff;
 }
 
+img.avatar {
+  object-fit: cover;
+}
+
 .badge {
   position: absolute;
   top: -6px;

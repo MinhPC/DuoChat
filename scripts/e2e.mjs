@@ -385,7 +385,7 @@ try {
   // ---------- 9. thoát mềm rồi mở lại: còn account và layout ----------
   await stop(app)
   const saved = JSON.parse(fs.readFileSync(savedPath, 'utf8'))
-  check('sau khi thoát: schemaVersion 2, 2 account, đã đổi tên + sắp xếp', saved.schemaVersion === 2 && saved.accounts.length === 2 && saved.accounts[0].id === B.id && saved.accounts[1].name === 'Cá nhân 2')
+  check('sau khi thoát: schemaVersion 3, 2 account, đã đổi tên + sắp xếp', saved.schemaVersion === 3 && saved.accounts.length === 2 && saved.accounts[0].id === B.id && saved.accounts[1].name === 'Cá nhân 2')
   const logFile = path.join(userData, 'logs', 'duochat.log')
   const logText = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : ''
   check('có nhật ký kỹ thuật (app_start, locked…)', /app_start/.test(logText) && /locked/.test(logText), logFile)

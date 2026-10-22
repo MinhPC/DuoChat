@@ -2,7 +2,7 @@
 
 > Tên dự án tạm: **DuoChat**. Không dùng chữ "Zalo" trong tên app và icon để tránh vấn đề thương hiệu.
 > Tài liệu này là đặc tả cho Claude Code. Đọc hết trước khi code. Làm đúng thứ tự ở mục 7 và **dừng lại ở các điểm kiểm tra (⛔)** để báo cáo.
-> Phiên bản spec: **v3** (2026-10-22). v2 đã thêm: split view vào MVP, chặn và định tuyến thông báo, chống throttle view nền, phím tắt, menu chuột phải, rủi ro mất phiên. v3: app mobile chỉ làm cho **iOS** (bỏ Android), thêm so sánh phương án giống Zalo gốc (mục 3.2); R1 đã kiểm chứng không xảy ra.
+> Phiên bản spec: **v4** (2026-10-22). v4: cho phép đọc tên + ảnh đại diện của chính tài khoản khi người dùng bấm nút (mục 4.3), `schemaVersion` 3. v2 đã thêm: split view vào MVP, chặn và định tuyến thông báo, chống throttle view nền, phím tắt, menu chuột phải, rủi ro mất phiên. v3: app mobile chỉ làm cho **iOS** (bỏ Android), thêm so sánh phương án giống Zalo gốc (mục 3.2); R1 đã kiểm chứng không xảy ra.
 
 ---
 
@@ -114,13 +114,14 @@ export interface Account {
   color: string;         // màu avatar sidebar (chọn từ palette 8 màu)
   order: number;
   muted: boolean;        // tắt thông báo (badge vẫn đếm)
+  avatar?: string;       // data URL PNG 96x96 lấy từ hồ sơ Zalo (mục 4.3), tùy chọn
   createdAt: string;     // ISO
 }
 
 export type LayoutMode = 'single' | 'split';
 
 export interface Settings {
-  schemaVersion: 2;
+  schemaVersion: 3;
   accounts: Account[];
   layout: {
     mode: LayoutMode;
@@ -304,13 +305,18 @@ Thứ tự: P2 trước, rồi P3. Ghi kết quả vào `docs/spike-mobile.md`.
 
 ## 4. Can thiệp tối thiểu vào trang (Windows và iOS)
 
-Chỉ được phép làm hai việc sau:
+Chỉ được phép làm ba việc sau:
 1. **Đọc `document.title`** từ phía app (qua sự kiện `page-title-updated`, không inject gì).
 2. **Shim thông báo** `src/inject/notification-shim.js`:
    - Main gọi `webContents.executeJavaScript(shim)` ở sự kiện `dom-ready` (chạy trong main world, không bị CSP chặn như thẻ `<script>`).
    - Shim thay `window.Notification` bằng một class tương thích: `permission` luôn là `'granted'`, `requestPermission()` resolve `'granted'`, constructor gọi `window.__duochat.notify({ title, body, icon, tag })` và **không** tạo thông báo gốc. Trả về object có `close()`, `onclick` để không làm trang lỗi.
    - Shim phải idempotent (chạy lại khi reload không bị lỗi) và được bọc trong `try/catch`.
    - Trên iOS, cầu nối là `WKScriptMessageHandler`, cùng API `notify`.
+3. **Đọc hồ sơ của chính tài khoản đang đăng nhập** (v4): đúng hai thứ là *tên hiển thị* và *URL ảnh đại diện*.
+   - Chỉ chạy khi người dùng bấm "Lấy tên và ảnh từ Zalo" (menu chuột phải trên avatar sidebar). Không chạy tự động, không chạy ngầm.
+   - Main chạy `executeJavaScript` một lần, script chỉ trả về `{ name, avatarUrl }`. Không đọc danh sách chat, danh bạ hay nội dung tin nhắn.
+   - Ảnh tải qua session của chính partition đó, chỉ từ host trong allowlist, thu nhỏ còn 96x96 và lưu cục bộ (`Account.avatar`, data URL PNG). Không gửi đi đâu.
+   - Không đọc được thì giữ nguyên tên và màu người dùng tự đặt, báo lại cho người dùng.
 
 Không đọc DOM tin nhắn, không gửi tin, không sửa CSS hay giao diện Zalo.
 

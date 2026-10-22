@@ -16,12 +16,13 @@ import {
   type Settings,
 } from '../shared/types'
 import { clampRatio } from './layout'
+import { isAvatarDataUrl } from './profile'
 
-export const CURRENT_SCHEMA_VERSION = 2
+export const CURRENT_SCHEMA_VERSION = 3
 
 export function defaultSettings(): Settings {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     accounts: [],
     layout: {
       mode: 'single',
@@ -72,12 +73,18 @@ function migrateV1ToV2(raw: Json): Json {
   }
 }
 
-/** Nhận JSON bất kỳ (kể cả rác) và trả về Settings v2 hợp lệ. */
+/** v2 → v3: thêm `Account.avatar` (tùy chọn). normalize lo phần còn lại nên chỉ cần đổi số phiên bản. */
+function migrateV2ToV3(raw: Json): Json {
+  return { ...raw, schemaVersion: 3 }
+}
+
+/** Nhận JSON bất kỳ (kể cả rác) và trả về Settings v3 hợp lệ. */
 export function migrate(raw: unknown): Settings {
   if (!isObj(raw)) return defaultSettings()
   const version = typeof raw.schemaVersion === 'number' ? raw.schemaVersion : 1
   let cur: Json = raw
   if (version < 2) cur = migrateV1ToV2(cur)
+  if (version < 3) cur = migrateV2ToV3(cur)
   // Phiên bản mới hơn app: đọc theo khả năng, normalize sẽ loại field lạ.
   return normalizeSettings(cur)
 }
@@ -110,6 +117,7 @@ function normalizeAccounts(input: unknown): Account[] {
         preview: (PREVIEW_MODES as readonly unknown[]).includes(a.preview)
           ? (a.preview as PreviewMode)
           : 'default',
+        ...(isAvatarDataUrl(a.avatar) ? { avatar: a.avatar } : {}),
         createdAt: str(a.createdAt) ?? new Date(0).toISOString(),
       },
     })
@@ -188,7 +196,7 @@ export function normalizeSettings(input: Json): Settings {
     ? [...new Set(input.pendingPartitionCleanup.filter((x): x is string => typeof x === 'string'))]
     : []
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     accounts,
     layout: normalizeLayout(input.layout, accounts),
     startWithWindows: bool(input.startWithWindows, d.startWithWindows),

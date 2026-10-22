@@ -30,6 +30,7 @@ export interface Account {
   sound: AccountSound // âm báo riêng của account
   preview: PreviewMode // hiện nội dung tin trong thông báo của account này
   dnd: DndSchedule // khung giờ không làm phiền (badge vẫn đếm)
+  avatar?: string // data URL PNG lấy từ hồ sơ Zalo của chính account (CLAUDE.md mục 4.3)
   createdAt: string // ISO
 }
 
@@ -54,7 +55,7 @@ export interface WindowState {
 }
 
 export interface Settings {
-  schemaVersion: 2
+  schemaVersion: 3
   accounts: Account[]
   layout: LayoutSettings
   startWithWindows: boolean

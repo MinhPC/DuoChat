@@ -31,6 +31,10 @@ export function registerIpc(
     const t = vi.accountMenu
     const menu = Menu.buildFromTemplate([
       { label: t.rename, click: () => shellWc.send(IPC.requestRename, id) },
+      { label: t.syncProfile, click: () => void manager.syncProfile(id) },
+      ...(account.avatar
+        ? [{ label: t.clearAvatar, click: () => manager.patchAccount(id, { avatar: null }) }]
+        : []),
       { label: t.dnd, click: () => shellWc.send(IPC.requestDnd, id) },
       {
         label: t.color,
