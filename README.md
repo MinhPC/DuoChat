@@ -65,6 +65,15 @@ Bật trong Cài đặt (PIN 4–8 chữ số, có thể tự khóa khi máy kh�
 
 Phiên Zalo được giữ sau khi tắt app (đã kiểm chứng: cookie xác thực là persistent). Khi Zalo bắt đăng nhập lại (hết hạn phía máy chủ), avatar hiện dấu **!** màu cam và có thẻ báo "Cần đăng nhập lại"; chỉ cần quét lại mã QR.
 
+### Bộ nhớ và cập nhật
+
+Cài đặt hiển thị RAM của từng tài khoản (làm mới mỗi 3 giây). Nội dung tin trong thông báo có thể đặt riêng từng tài
+khoản (chuột phải avatar → Nội dung tin trong thông báo).
+
+**Tự cập nhật mặc định tắt** vì DuoChat cam kết không gửi dữ liệu ra ngoài. Bật trong Cài đặt thì app kiểm tra GitHub
+Releases (`MinhPC/DuoChat`) mỗi 6 giờ, chỉ tải file `latest.yml`. Chỉ áp dụng cho bản cài đặt, không áp dụng cho bản
+portable. Để phát hành: đặt `GH_TOKEN` rồi chạy `npx electron-builder --win --x64 --publish always`.
+
 ### Nhật ký lỗi
 
 `%APPDATA%DuoChatlogsduochat.log` (xoay vòng ở 1 MB) chỉ ghi sự kiện kỹ thuật như khởi động, lỗi tải trang, khóa/mở khóa. Không bao giờ ghi nội dung tin nhắn, cookie hay PIN; không gửi đi đâu.
