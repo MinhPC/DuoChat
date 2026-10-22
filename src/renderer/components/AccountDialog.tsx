@@ -67,6 +67,7 @@ export function AccountDialog({ mode, account, accountCount, onClose }: Props): 
             </div>
           </div>
         )}
+        {mode === 'add' && <p className="hint">{t.autoProfileHint}</p>}
         {mode === 'add' && accountCount >= SOFT_ACCOUNT_LIMIT && (
           <p className="warn">{t.limitWarning}</p>
         )}

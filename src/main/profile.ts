@@ -25,6 +25,10 @@ export const PROFILE_SCRIPT = String.raw`(() => {
     const HOST = /^https:\/\/([^/]+\.)?(zadn\.vn|zdn\.vn|zalo\.me|zaloapp\.com)\//i
     const inCorner = (r) => r.width >= 24 && r.width <= 96 && Math.abs(r.width - r.height) <= 4 && r.left < 140 && r.top < 180
     const cands = []
+    // Ưu tiên cấu trúc (không phụ thuộc bố cục nên đọc được cả khi view đang ẩn): ảnh trong avatar bấm được ở thanh trái.
+    const nav = document.querySelector('.zavatar-container.clickable img')
+    const navSrc = nav && (nav.currentSrc || nav.src)
+    if (navSrc && HOST.test(navSrc)) cands.push({ el: nav, src: navSrc, top: -1 })
     for (const img of document.querySelectorAll('img')) {
       const src = img.currentSrc || img.src
       const r = img.getBoundingClientRect()
@@ -103,4 +107,49 @@ export function isAvatarDataUrl(v: unknown): v is string {
 export function toAvatarDataUrl(png: Buffer): string | null {
   const url = AVATAR_PREFIX + png.toString('base64')
   return isAvatarDataUrl(url) ? url : null
+}
+
+export const DEFAULT_ACCOUNT_NAME = 'Tài khoản'
+
+export interface ProfileTarget {
+  name: string
+  avatar?: string
+  profileName?: string // tên Zalo lần đọc gần nhất
+}
+
+export interface ProfilePatch {
+  name?: string
+  avatar?: string
+  profileName?: string
+}
+
+/**
+ * Quyết định ghi gì vào account sau khi đọc hồ sơ.
+ * - manual (người dùng bấm nút): ghi đè tên và ảnh.
+ * - auto: không giẫm lên thứ người dùng tự đặt. Tên chỉ đổi khi còn là tên mặc định, đang trùng tên Zalo
+ *   lần trước (chưa tự sửa), hoặc là lần đọc đầu của account vừa thêm. Ảnh đã bị người dùng bỏ
+ *   (từng đọc hồ sơ mà không còn ảnh) thì không tự thêm lại.
+ */
+export function planProfileUpdate(
+  acc: ProfileTarget,
+  read: { name: string | null; avatar: string | null },
+  mode: 'manual' | 'auto',
+  firstSync = false,
+): ProfilePatch {
+  const patch: ProfilePatch = {}
+  if (read.name) {
+    patch.profileName = read.name
+    const mayRename =
+      mode === 'manual' ||
+      firstSync ||
+      acc.name === DEFAULT_ACCOUNT_NAME ||
+      (acc.profileName !== undefined && acc.name === acc.profileName)
+    if (mayRename && read.name !== acc.name) patch.name = read.name
+  }
+  if (read.avatar && read.avatar !== acc.avatar) {
+    const cleared = acc.avatar === undefined && acc.profileName !== undefined
+    if (mode === 'manual' || !cleared) patch.avatar = read.avatar
+  }
+  if (patch.profileName === acc.profileName) delete patch.profileName
+  return patch
 }

@@ -36,7 +36,13 @@ import {
   visibleAccountIds,
 } from './layoutActions'
 import { attachLinkHandling } from './links'
-import { parseProfile, PROFILE_SCRIPT, toAvatarDataUrl } from './profile'
+import {
+  nameFromTitle,
+  parseProfile,
+  planProfileUpdate,
+  PROFILE_SCRIPT,
+  toAvatarDataUrl,
+} from './profile'
 import { createLock, isValidPin, retryDelayMs, verifyPin } from './lock'
 import type { Logger } from './logger'
 import { applyPermissionHandlers } from './permissions'
@@ -56,7 +62,7 @@ import {
 const ZOOM_STEP = 0.1
 const MAX_NAME = 40
 const LOGGED_IN_STABLE_MS = 8000
-const PROFILE_LAYOUT_WAIT_MS = 600
+const AUTO_SYNC_COOLDOWN_MS = 60_000
 const AVATAR_SIZE = 96
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 
@@ -76,6 +82,10 @@ export class AccountManager {
   private pinFailures = 0
   private retryUntil = 0
   private readonly needsLogin = new Map<string, boolean>()
+  private readonly profileSyncing = new Set<string>()
+  private readonly lastAutoSync = new Map<string, number>()
+  // Account vừa thêm trong phiên này: lần đọc hồ sơ đầu tiên được thay tên người dùng đã nhập.
+  private readonly pendingFirstSync = new Set<string>()
   private readonly wasLoggedIn = new Set<string>()
   private readonly loggedInTimers = new Map<string, NodeJS.Timeout>()
   private readonly pageInfo = new Map<string, { url: string; title: string }>()
@@ -202,6 +212,8 @@ export class AccountManager {
     this.unread.delete(id)
     this.needsLogin.delete(id)
     this.pageInfo.delete(id)
+    this.pendingFirstSync.delete(id)
+    this.lastAutoSync.delete(id)
     this.forgetLoggedIn(id)
     this.win.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
@@ -303,6 +315,10 @@ export class AccountManager {
 
   private onTitle(id: string, title: string): void {
     this.updatePage(id, { title })
+    const zaloName = nameFromTitle(title)
+    if (zaloName && this.wasLoggedIn.has(id) && zaloName !== this.getAccount(id)?.profileName) {
+      this.autoSyncProfile(id)
+    }
     const cur = this.unread.get(id)
     if (!cur) return
     this.unread.set(id, applyTitle(cur, title))
@@ -465,6 +481,7 @@ export class AccountManager {
       createdAt: new Date().toISOString(),
     }
     this.store.update((d) => ({ ...d, accounts: [...d.accounts, account] }))
+    this.pendingFirstSync.add(account.id)
     this.createView(account)
     this.select(account.id, { swapIfOther: true })
     return account
@@ -474,6 +491,7 @@ export class AccountManager {
     id: string,
     patch: Partial<Pick<Account, 'name' | 'color' | 'muted' | 'sound' | 'dnd' | 'preview'>> & {
       avatar?: string | null // null = bỏ ảnh
+      profileName?: string
     },
   ): void {
     this.store.update((s) => ({
@@ -490,6 +508,7 @@ export class AccountManager {
         if (patch.preview) next.preview = patch.preview
         if (patch.avatar === null) delete next.avatar
         else if (typeof patch.avatar === 'string') next.avatar = patch.avatar
+        if (typeof patch.profileName === 'string') next.profileName = patch.profileName
         return next
       }),
     }))
@@ -498,37 +517,46 @@ export class AccountManager {
 
   /**
    * Lấy tên + ảnh đại diện của chính tài khoản đang đăng nhập (CLAUDE.md mục 4.3).
-   * Chỉ gọi khi người dùng bấm nút. Không đọc được thì giữ nguyên dữ liệu hiện có.
+   * `manual`: người dùng bấm nút, ghi đè và báo kết quả. `auto`: chạy ngầm (sau khi đăng nhập, khi tên trên
+   * Zalo đổi), không giẫm lên tên/ảnh người dùng tự đặt và không báo gì.
+   * Không đọc được thì giữ nguyên dữ liệu hiện có.
    */
-  async syncProfile(id: string): Promise<void> {
-    const view = this.views.get(id)
-    const wc = view?.webContents
+  async syncProfile(id: string, mode: 'manual' | 'auto' = 'manual'): Promise<void> {
+    const wc = this.views.get(id)?.webContents
     if (!wc || wc.isDestroyed()) return
     const notify = (key: NoticeKey): void => {
-      for (const cb of this.noticeListeners) cb(key)
+      if (mode === 'manual') for (const cb of this.noticeListeners) cb(key)
     }
     if (this.needsLogin.get(id)) return notify('profileNotLoggedIn')
-    // View đang ẩn thì chưa có bố cục (kích thước 0), không tìm được ảnh theo vị trí: đưa lên màn hình trước.
-    if (!visibleAccountIds(this.store.get().layout).includes(id)) {
-      this.select(id, { swapIfOther: true })
-      await new Promise((r) => setTimeout(r, PROFILE_LAYOUT_WAIT_MS))
-      if (wc.isDestroyed()) return
-    }
-
-    let profile = parseProfile(null)
+    if (this.profileSyncing.has(id)) return
+    this.profileSyncing.add(id)
     try {
-      profile = parseProfile(await wc.executeJavaScript(PROFILE_SCRIPT))
-    } catch {
-      /* trang đang tải hoặc lỗi: coi như không đọc được */
-    }
-    const avatar = profile.avatarUrl ? await this.fetchAvatar(id, profile.avatarUrl) : null
-    if (!profile.name && !avatar) return notify('profileNotFound')
+      let profile = parseProfile(null)
+      try {
+        profile = parseProfile(await wc.executeJavaScript(PROFILE_SCRIPT))
+      } catch {
+        /* trang đang tải hoặc lỗi: coi như không đọc được */
+      }
+      const avatar = profile.avatarUrl ? await this.fetchAvatar(id, profile.avatarUrl) : null
+      if (!profile.name && !avatar) return notify('profileNotFound')
 
-    this.patchAccount(id, {
-      ...(profile.name ? { name: profile.name } : {}),
-      ...(avatar ? { avatar } : {}),
-    })
-    notify(profile.name && avatar ? 'profileDone' : 'profilePartial')
+      const account = this.getAccount(id)
+      if (!account) return
+      const firstSync = this.pendingFirstSync.delete(id)
+      const patch = planProfileUpdate(account, { name: profile.name, avatar }, mode, firstSync)
+      if (Object.keys(patch).length > 0) this.patchAccount(id, patch)
+      notify(profile.name && avatar ? 'profileDone' : 'profilePartial')
+    } finally {
+      this.profileSyncing.delete(id)
+    }
+  }
+
+  /** Chạy ngầm, tối đa một lần mỗi phút cho mỗi account (tránh lặp khi không đọc được). */
+  private autoSyncProfile(id: string): void {
+    const now = Date.now()
+    if (now - (this.lastAutoSync.get(id) ?? 0) < AUTO_SYNC_COOLDOWN_MS) return
+    this.lastAutoSync.set(id, now)
+    void this.syncProfile(id, 'auto')
   }
 
   /** Tải ảnh qua session của chính partition, thu nhỏ 96x96, trả data URL PNG (chỉ lưu cục bộ). */
@@ -623,6 +651,7 @@ export class AccountManager {
         setTimeout(() => {
           this.loggedInTimers.delete(id)
           this.wasLoggedIn.add(id)
+          this.autoSyncProfile(id)
         }, LOGGED_IN_STABLE_MS),
       )
     }

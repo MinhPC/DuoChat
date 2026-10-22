@@ -48,6 +48,8 @@ export const vi = {
     namePlaceholder: 'Ví dụ: Cá nhân, Công ty',
     colorLabel: 'Màu',
     cancel: 'Hủy',
+    autoProfileHint:
+      'Sau khi đăng nhập, DuoChat tự lấy tên và ảnh đại diện từ Zalo cho tài khoản này (đổi lại bằng "Đổi tên" bất cứ lúc nào).',
     add: 'Thêm',
     save: 'Lưu',
     close: 'Đóng',

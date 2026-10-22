@@ -30,6 +30,7 @@ export interface Account {
   sound: AccountSound // âm báo riêng của account
   preview: PreviewMode // hiện nội dung tin trong thông báo của account này
   dnd: DndSchedule // khung giờ không làm phiền (badge vẫn đếm)
+  profileName?: string // tên Zalo đọc lần gần nhất, để biết tên hiện tại có phải do người dùng tự đặt không
   avatar?: string // data URL PNG lấy từ hồ sơ Zalo của chính account (CLAUDE.md mục 4.3)
   createdAt: string // ISO
 }

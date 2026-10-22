@@ -2,7 +2,7 @@
 
 > Tên dự án tạm: **DuoChat**. Không dùng chữ "Zalo" trong tên app và icon để tránh vấn đề thương hiệu.
 > Tài liệu này là đặc tả cho Claude Code. Đọc hết trước khi code. Làm đúng thứ tự ở mục 7 và **dừng lại ở các điểm kiểm tra (⛔)** để báo cáo.
-> Phiên bản spec: **v4** (2026-10-22). v4: cho phép đọc tên + ảnh đại diện của chính tài khoản khi người dùng bấm nút (mục 4.3), `schemaVersion` 3. v2 đã thêm: split view vào MVP, chặn và định tuyến thông báo, chống throttle view nền, phím tắt, menu chuột phải, rủi ro mất phiên. v3: app mobile chỉ làm cho **iOS** (bỏ Android), thêm so sánh phương án giống Zalo gốc (mục 3.2); R1 đã kiểm chứng không xảy ra.
+> Phiên bản spec: **v4** (2026-10-22). v4: cho phép đọc tên + ảnh đại diện của chính tài khoản, tự động sau khi đăng nhập hoặc khi người dùng bấm nút (mục 4.3), `schemaVersion` 3. v2 đã thêm: split view vào MVP, chặn và định tuyến thông báo, chống throttle view nền, phím tắt, menu chuột phải, rủi ro mất phiên. v3: app mobile chỉ làm cho **iOS** (bỏ Android), thêm so sánh phương án giống Zalo gốc (mục 3.2); R1 đã kiểm chứng không xảy ra.
 
 ---
 
@@ -115,6 +115,7 @@ export interface Account {
   order: number;
   muted: boolean;        // tắt thông báo (badge vẫn đếm)
   avatar?: string;       // data URL PNG 96x96 lấy từ hồ sơ Zalo (mục 4.3), tùy chọn
+  profileName?: string;  // tên Zalo đọc lần gần nhất (để biết tên hiện tại có phải người dùng tự đặt)
   createdAt: string;     // ISO
 }
 
@@ -313,10 +314,11 @@ Chỉ được phép làm ba việc sau:
    - Shim phải idempotent (chạy lại khi reload không bị lỗi) và được bọc trong `try/catch`.
    - Trên iOS, cầu nối là `WKScriptMessageHandler`, cùng API `notify`.
 3. **Đọc hồ sơ của chính tài khoản đang đăng nhập** (v4): đúng hai thứ là *tên hiển thị* và *URL ảnh đại diện*.
-   - Chỉ chạy khi người dùng bấm "Lấy tên và ảnh từ Zalo" (menu chuột phải trên avatar sidebar). Không chạy tự động, không chạy ngầm.
-   - Main chạy `executeJavaScript` một lần, script chỉ trả về `{ name, avatarUrl }`. Không đọc danh sách chat, danh bạ hay nội dung tin nhắn.
-   - Ảnh tải qua session của chính partition đó, chỉ từ host trong allowlist, thu nhỏ còn 96x96 và lưu cục bộ (`Account.avatar`, data URL PNG). Không gửi đi đâu.
-   - Không đọc được thì giữ nguyên tên và màu người dùng tự đặt, báo lại cho người dùng.
+   - Chạy khi: (a) người dùng bấm "Lấy tên và ảnh từ Zalo" (menu chuột phải trên avatar sidebar); (b) tự động, một lần sau khi account đăng nhập ổn định (mỗi lần mở app) và khi tên trong tiêu đề tab (`Zalo - <tên>`) khác tên đã đọc lần trước. Mỗi account tự động tối đa một lần mỗi phút. Không chạy khi chưa đăng nhập.
+   - Main chạy `executeJavaScript`, script chỉ trả về `{ name, title, avatarUrl }`. Không đọc danh sách chat, danh bạ hay nội dung tin nhắn.
+   - Tự động không giẫm lên thứ người dùng tự đặt: tên chỉ đổi khi còn là tên mặc định, đang trùng tên Zalo lần trước (`Account.profileName`), hoặc là lần đọc đầu của account vừa thêm. Ảnh người dùng đã bỏ thì không tự thêm lại. Bấm nút thủ công thì ghi đè.
+   - Ảnh tải qua session của chính partition đó (cấm chuyển hướng), chỉ từ host trong allowlist, thu nhỏ 96x96 và lưu cục bộ (`Account.avatar`, data URL PNG). Không gửi đi đâu.
+   - Không đọc được thì giữ nguyên tên và màu người dùng tự đặt.
 
 Không đọc DOM tin nhắn, không gửi tin, không sửa CSS hay giao diện Zalo.
 

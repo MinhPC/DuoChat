@@ -4,6 +4,7 @@ import { defaultSettings, migrate } from '../src/main/store'
 import {
   cleanName,
   nameFromTitle,
+  planProfileUpdate,
   isAvatarDataUrl,
   parseProfile,
   PROFILE_SCRIPT,
@@ -89,7 +90,10 @@ describe('PROFILE_SCRIPT', () => {
     vm.runInNewContext(PROFILE_SCRIPT, { document, getComputedStyle: () => ({}) })
 
   it('là cú pháp hợp lệ và trả null khi trang không có ảnh phù hợp', () => {
-    expect(run({ querySelectorAll: () => [] })).toMatchObject({ name: null, avatarUrl: null })
+    expect(run({ querySelector: () => null, querySelectorAll: () => [] })).toMatchObject({
+      name: null,
+      avatarUrl: null,
+    })
   })
   it('không ném lỗi khi DOM hỏng', () => {
     expect(
@@ -109,6 +113,7 @@ describe('PROFILE_SCRIPT', () => {
       parentElement: null,
     })
     const r = run({
+      querySelector: () => null,
       querySelectorAll: (sel: string) =>
         sel === 'img'
           ? [
@@ -137,5 +142,41 @@ describe('migrate v2 → v3', () => {
       migrate({ ...defaultSettings(), accounts: [{ ...acc, avatar: 'https://evil/x.png' }] })
         .accounts[0].avatar,
     ).toBeUndefined()
+  })
+})
+
+describe('planProfileUpdate', () => {
+  const read = { name: 'Minh Phan', avatar: PNG }
+  it('manual ghi đè tên và ảnh', () => {
+    expect(planProfileUpdate({ name: 'Công ty' }, read, 'manual')).toEqual({
+      name: 'Minh Phan',
+      profileName: 'Minh Phan',
+      avatar: PNG,
+    })
+  })
+  it('auto giữ tên người dùng tự đặt nhưng ghi nhớ tên Zalo', () => {
+    expect(planProfileUpdate({ name: 'Công ty' }, read, 'auto')).toEqual({
+      profileName: 'Minh Phan',
+      avatar: PNG,
+    })
+  })
+  it('auto đổi tên khi còn mặc định, trùng tên Zalo cũ, hoặc là lần đọc đầu của account mới', () => {
+    expect(planProfileUpdate({ name: 'Tài khoản' }, read, 'auto').name).toBe('Minh Phan')
+    expect(planProfileUpdate({ name: 'Tên cũ', profileName: 'Tên cũ' }, read, 'auto').name).toBe(
+      'Minh Phan',
+    )
+    expect(planProfileUpdate({ name: 'Cá nhân' }, read, 'auto', true).name).toBe('Minh Phan')
+  })
+  it('auto không thêm lại ảnh người dùng đã bỏ, manual thì có', () => {
+    const cleared = { name: 'A', profileName: 'Minh Phan' }
+    expect(planProfileUpdate(cleared, read, 'auto').avatar).toBeUndefined()
+    expect(planProfileUpdate(cleared, read, 'manual').avatar).toBe(PNG)
+  })
+  it('không có gì đổi thì patch rỗng', () => {
+    const same = { name: 'Minh Phan', profileName: 'Minh Phan', avatar: PNG }
+    expect(planProfileUpdate(same, read, 'auto')).toEqual({})
+  })
+  it('đọc không ra gì thì không ghi gì', () => {
+    expect(planProfileUpdate({ name: 'A' }, { name: null, avatar: null }, 'auto')).toEqual({})
   })
 })

@@ -16,7 +16,7 @@ import {
   type Settings,
 } from '../shared/types'
 import { clampRatio } from './layout'
-import { isAvatarDataUrl } from './profile'
+import { cleanName, isAvatarDataUrl } from './profile'
 
 export const CURRENT_SCHEMA_VERSION = 3
 
@@ -118,6 +118,7 @@ function normalizeAccounts(input: unknown): Account[] {
           ? (a.preview as PreviewMode)
           : 'default',
         ...(isAvatarDataUrl(a.avatar) ? { avatar: a.avatar } : {}),
+        ...(cleanName(a.profileName) ? { profileName: cleanName(a.profileName) as string } : {}),
         createdAt: str(a.createdAt) ?? new Date(0).toISOString(),
       },
     })
