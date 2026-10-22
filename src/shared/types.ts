@@ -1,6 +1,22 @@
 export const ACCOUNT_SOUNDS = ['default', 'soft', 'off'] as const
 export type AccountSound = (typeof ACCOUNT_SOUNDS)[number]
 
+/** Khung giờ không làm phiền (HH:MM, 24h). Có thể qua nửa đêm, vd 22:00 → 07:00. */
+export interface DndSchedule {
+  enabled: boolean
+  from: string
+  to: string
+}
+
+export interface LockSettings {
+  enabled: boolean
+  salt: string // hex
+  hash: string // scrypt(PIN, salt), hex. Chỉ khóa giao diện, KHÔNG mã hóa dữ liệu.
+  autoLockMinutes: number // 0 = không tự khóa
+}
+
+export const AUTO_LOCK_OPTIONS = [0, 1, 5, 15, 30] as const
+
 export interface Account {
   id: string // uuid, cũng là hậu tố partition
   name: string
@@ -8,6 +24,7 @@ export interface Account {
   order: number
   muted: boolean // tắt thông báo (badge vẫn đếm)
   sound: AccountSound // âm báo riêng của account
+  dnd: DndSchedule // khung giờ không làm phiền (badge vẫn đếm)
   createdAt: string // ISO
 }
 
@@ -39,6 +56,7 @@ export interface Settings {
   startMinimized: boolean // khi tự khởi động cùng Windows
   minimizeToTray: boolean // bấm X → ẩn xuống tray
   zoomFactor: number // 0.5–2.0, áp cho mọi view Zalo
+  lock: LockSettings
   notifyPreview: boolean // hiện nội dung tin trong thông báo (mặc định ẩn để riêng tư)
   window: WindowState
   // id account đã xóa, thư mục partition sẽ được xóa hẳn ở lần khởi động sau (mục 2.5.4)

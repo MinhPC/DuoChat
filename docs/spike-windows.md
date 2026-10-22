@@ -23,6 +23,7 @@ Script:
 | Hai phiên tách biệt về lưu trữ | **Đạt ở mức thư mục:** mỗi account có `Partitions/acc-<id>` riêng trên đĩa. Chưa kiểm chứng "hai tài khoản đăng nhập thật cùng lúc không đá nhau". |
 | UA | **Đạt.** `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.48 Safari/537.36`. Kiểm tra bằng `spike/ua-check.cjs`: header `User-Agent` của request đầu tiên tới `chat.zalo.me` và `navigator.userAgent` ở `dom-ready` đầu tiên đều sạch (không `Electron/`, không tên app). `navigator.userAgentData.brands` = `Not:A-Brand`, `Chromium` (không có brand "Electron"). Zalo không chặn trang đăng nhập (R2 chưa thấy dấu hiệu, mới chỉ xét trang đăng nhập). |
 | `document.title` khi **chưa đăng nhập** | `Zalo - Đăng nhập Zalo` → `Zalo` → `Đăng nhập tài khoản Zalo` (đổi 3 lần khi tải). |
+| **R1: giữ phiên sau khi tắt app** | **Đã kiểm chứng với 2 tài khoản thật (2026-10-22): KHÔNG xảy ra.** Cả hai partition có 13 cookie, **không cookie nào là session**. Cookie xác thực `zpw_sek` (chat.zalo.me), `zlogin_session` và `zpdid` (id.zalo.me), `zpsid` (zalo.me, zaloapp.com) đều persistent. Đọc từ `Cookies` của partition, chỉ lấy tên và cờ `is_persistent`, không đọc giá trị. |
 | Cookie trên trang đăng nhập | Toàn bộ **persistent**: `_zlang`, `__zi`, `__zi-legacy` (.zalo.me); `zpdid`, `zlogin_session` (.id.zalo.me); `_ga`, `_gid`, `_gat`, `_ga_*`. Cookie xác thực sau đăng nhập **chưa quan sát được** nên R1 chưa kết luận. |
 | View bị ẩn không bị throttle | `document.visibilityState` của view ẩn bằng `setVisible(false)` vẫn là `visible` khi `backgroundThrottling: false` (đúng ý đồ: timer/websocket không bị Chromium hạ tốc). Chưa đo "10 phút nhận thông báo" vì cần đăng nhập. |
 | Shim thông báo (R4) | **Cầu nối đạt, thông báo thật của Zalo chưa thử.** Trong trang thật: `window.Notification` là lớp của shim, `permission = 'granted'`, `requestPermission()` resolve `granted`, và `new Notification(...)` đi qua `window.__duochat.notify` → main → tăng badge đúng account. Cầu nối chỉ expose đúng một hàm `notify`, trang không thấy `require`/`process`/`ipcRenderer`. Shim chạy ở `dom-ready`; nếu Zalo giữ tham chiếu `Notification` gốc trước thời điểm đó thì có thể trượt (R4), cách khắc phục dự phòng: chạy shim sớm hơn từ preload bằng `webFrame.executeJavaScript`. |
@@ -35,6 +36,7 @@ Thuộc Zalo (đã đưa vào allowlist ở [src/main/service.ts](../src/main/se
 
 - `*.zalo.me`: `chat.zalo.me`, `id.zalo.me`, `jr.zalo.me`, `jr.chat.zalo.me`, `wpa.chat.zalo.me`, `za.zalo.me`
 - `*.zadn.vn`: `zalo-chat-static.zadn.vn`, `stc-sp.zadn.vn`
+- `zaloapp.com` (xuất hiện cùng cookie `__zi`, `zpsid` sau đăng nhập; đã thêm vào allowlist)
 - `*.zdn.vn`: `za.zdn.vn`, `stc-chat.zdn.vn`, `zalo-captcha.zdn.vn`, `stc-zlogin.zdn.vn` (**spec chưa dự kiến domain này**)
 
 Bên thứ ba (KHÔNG đưa vào allowlist; chỉ là tài nguyên con của trang, allowlist chỉ áp cho điều hướng, popup và quyền):
@@ -56,14 +58,15 @@ Cần bổ sung allowlist khi đăng nhập xong nếu thấy thêm domain (tả
 1. Title có tin chưa đọc dạng `(N) Zalo` hoặc `[N] Zalo`. `unread.ts` nhận cả hai kiểu và có **fallback đếm thông báo**
    (mục 10) nếu title chưa từng chứa số. Fixture trong [tests/fixtures/titles.json](../tests/fixtures/titles.json) nhóm
    `assumed` là **giả định**, cần thay bằng title thật.
-2. R1 (mất phiên khi tắt app) chưa kết luận; app đã flush storage + cookie của mọi partition trước khi thoát.
+2. ~~R1 chưa kết luận~~ → đã kết luận: không xảy ra (xem bảng trên).
+3. Trang đăng nhập có lúc hiện ngay trên `chat.zalo.me` (không chuyển sang `id.zalo.me` như lúc spike), nên app nhận diện "cần đăng nhập" bằng cả URL lẫn tiêu đề (có chữ "Đăng nhập").
 
 ## Checklist cho người dùng (cần 2 tài khoản Zalo + điện thoại)
 
 Chạy `npm run dev` (hoặc cài bản trong `dist/`), thêm 2 account, quét QR, rồi ghi kết quả vào đây:
 
 - [ ] Hai tài khoản đăng nhập cùng lúc, không đá nhau.
-- [ ] Tắt hẳn app (Thoát ở khay) rồi mở lại vẫn còn đăng nhập (R1). Ghi cookie xác thực là persistent hay session.
+- [x] Còn đăng nhập sau khi tắt app (R1): cookie xác thực đều persistent (đọc từ đĩa).
 - [ ] Thông báo hiện từ cả hai view, kể cả view đang ẩn 10 phút (R4): ______
 - [ ] Title khi có/không có tin chưa đọc: ______ / ______ (sửa fixture + `unread.ts` nếu khác giả định).
 - [ ] Gửi/nhận ảnh, file, dán ảnh clipboard, kéo thả file, tải file về (hộp thoại Save As + toast).

@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { IPC } from '../shared/ipc'
 import type { AccountManager } from './accounts'
+import { isInDnd } from './dnd'
 import { parseNotifyPayload } from './notifyPayload'
 import type { ToastManager } from './toast'
 
@@ -23,7 +24,8 @@ export function setupNotifications(
     if (!payload || !account) return
 
     manager.noteNotification(accountId)
-    if (account.muted || manager.isSeen(accountId)) return
+    // Tắt thông báo, đang xem, hoặc trong khung không làm phiền: không hiện toast (badge vẫn đếm).
+    if (account.muted || manager.isSeen(accountId) || isInDnd(account.dnd, new Date())) return
     toasts.show(account, payload, showPreview())
   })
 }

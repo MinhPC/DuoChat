@@ -1,7 +1,7 @@
 import { dialog, ipcMain, Menu, type BrowserWindow } from 'electron'
 import { IPC, type InvokeMap } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
-import { ACCOUNT_PALETTE, ACCOUNT_SOUNDS } from '../shared/types'
+import { ACCOUNT_PALETTE, ACCOUNT_SOUNDS, AUTO_LOCK_OPTIONS } from '../shared/types'
 import type { AccountManager } from './accounts'
 import type { SettingsStore } from './store'
 
@@ -12,6 +12,8 @@ type Handlers = {
 }
 
 const isString = (v: unknown): v is string => typeof v === 'string'
+
+const LOCKED_ALLOWED: ReadonlySet<string> = new Set([IPC.getState, IPC.unlock])
 
 /** Đăng ký toàn bộ IPC của shell. Chỉ nhận từ webContents của sidebar, không nhận từ view Zalo. */
 export function registerIpc(
@@ -28,6 +30,7 @@ export function registerIpc(
     const t = vi.accountMenu
     const menu = Menu.buildFromTemplate([
       { label: t.rename, click: () => shellWc.send(IPC.requestRename, id) },
+      { label: t.dnd, click: () => shellWc.send(IPC.requestDnd, id) },
       {
         label: t.color,
         submenu: ACCOUNT_PALETTE.map((color, i) => ({
@@ -115,6 +118,13 @@ export function registerIpc(
     [IPC.showAccountMenu]: (id) => {
       if (isString(id)) showAccountMenu(id)
     },
+    [IPC.setDnd]: (input) => {
+      if (!input || !isString(input.id) || !input.dnd) return
+      const { enabled, from, to } = input.dnd
+      if (typeof enabled === 'boolean' && isString(from) && isString(to)) {
+        manager.setDnd(input.id, { enabled, from, to }) // store.update chuẩn hóa giờ sai về mặc định
+      }
+    },
     [IPC.toggleSplit]: () => manager.toggleSplit(),
     [IPC.dragSplit]: (x) => {
       if (typeof x === 'number' && Number.isFinite(x)) manager.dragSplitTo(x)
@@ -122,6 +132,13 @@ export function registerIpc(
     [IPC.resetSplitRatio]: () => manager.resetSplitRatio(),
     [IPC.setOverlay]: (open) => manager.setOverlay(open === true),
     [IPC.setDragging]: (d) => manager.setDragging(d === true),
+    [IPC.lockNow]: () => manager.lockNow(),
+    [IPC.unlock]: (pin) => manager.unlock(pin),
+    [IPC.setPin]: (input) => manager.setPin(input?.pin, input?.current),
+    [IPC.removePin]: (pin) => manager.removePin(pin),
+    [IPC.setAutoLock]: (minutes) => {
+      if ((AUTO_LOCK_OPTIONS as readonly number[]).includes(minutes)) manager.setAutoLock(minutes)
+    },
     [IPC.updatePrefs]: (prefs) => {
       if (!prefs || typeof prefs !== 'object') return
       store.update((s) => ({
@@ -146,6 +163,8 @@ export function registerIpc(
   for (const channel of Object.keys(handlers) as (keyof InvokeMap)[]) {
     ipcMain.handle(channel, (event, arg: unknown) => {
       if (event.sender !== shellWc) throw new Error('IPC từ nguồn không hợp lệ')
+      // Đang khóa: chỉ cho đọc trạng thái và mở khóa.
+      if (manager.isLocked() && !LOCKED_ALLOWED.has(channel)) return undefined
       return (handlers[channel] as (a: unknown) => unknown)(arg)
     })
   }

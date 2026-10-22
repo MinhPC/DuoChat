@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function Sidebar({ state, onAdd, onSettings }: Props): React.JSX.Element {
-  const { accounts, layout, unread } = state
+  const { accounts, layout, unread, needsLogin } = state
   const [dragId, setDragId] = useState<string | null>(null)
   const split = layout.mode === 'split'
   const canSplit = split || accounts.length >= 2
@@ -40,6 +40,7 @@ export function Sidebar({ state, onAdd, onSettings }: Props): React.JSX.Element 
               account={a}
               index={i}
               unread={unread[a.id] ?? 0}
+              needsLogin={needsLogin[a.id] ?? false}
               shown={shown}
               focused={shown && (!split || pane === layout.focusedPane)}
               onSelect={() => void window.duochat.selectAccount(a.id)}
@@ -62,6 +63,15 @@ export function Sidebar({ state, onAdd, onSettings }: Props): React.JSX.Element 
         >
           ⇆
         </button>
+        {state.lock.enabled && (
+          <button
+            className="side-btn"
+            title={vi.sidebar.lock}
+            onClick={() => void window.duochat.lockNow()}
+          >
+            🔒
+          </button>
+        )}
         <button className="side-btn" title={vi.sidebar.settings} onClick={onSettings}>
           ⚙
         </button>

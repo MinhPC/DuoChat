@@ -56,6 +56,7 @@ export class ToastManager {
     account: Pick<Account, 'name' | 'color' | 'sound'> & { id: string },
     payload: { title: string; body: string },
     preview: boolean,
+    kind: 'message' | 'login' = 'message',
   ): void {
     let entry = this.entries.get(account.id)
     if (!entry) {
@@ -65,7 +66,7 @@ export class ToastManager {
       entry = this.create(account.id)
       this.entries.set(account.id, entry)
     }
-    entry.count += 1
+    entry.count = kind === 'login' ? 1 : entry.count + 1
     const view = buildToastView({
       account,
       count: entry.count,
@@ -73,6 +74,7 @@ export class ToastManager {
       title: payload.title,
       body: payload.body,
       playSound: true,
+      kind,
     })
     if (entry.ready) entry.win.webContents.send(IPC.toastData, view)
     else entry.pending = view

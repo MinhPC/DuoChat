@@ -15,7 +15,7 @@ export const ZALO_SERVICE: ServiceDefinition = {
   id: 'zalo',
   name: 'Zalo',
   url: 'https://chat.zalo.me',
-  allowedDomains: ['zalo.me', 'zadn.vn', 'zdn.vn'],
+  allowedDomains: ['zalo.me', 'zadn.vn', 'zdn.vn', 'zaloapp.com'],
 }
 
 export function isAllowedHost(hostname: string, svc: ServiceDefinition = ZALO_SERVICE): boolean {

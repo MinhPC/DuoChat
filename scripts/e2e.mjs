@@ -25,7 +25,7 @@ function launch() {
   delete env.ELECTRON_RUN_AS_NODE
   // DUOCHAT_EXE: chạy bản đã đóng gói (dist/win-unpacked/DuoChat.exe) thay vì chạy từ mã nguồn.
   const exe = process.env.DUOCHAT_EXE
-  const child = spawn(exe || electronPath, [...(exe ? [] : [root]), `--remote-debugging-port=${PORT}`], { env, stdio: 'ignore' })
+  const child = spawn(exe || electronPath, [...(exe ? [] : [root]), `--remote-debugging-port=${PORT}`], { env, stdio: process.env.E2E_VERBOSE ? 'inherit' : 'ignore' })
   return child
 }
 
@@ -72,7 +72,13 @@ function connect(wsUrl) {
 }
 
 async function evalIn(c, expression) {
-  const r = await c.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })
+  // Có thời hạn: nếu đích CDP đã đóng (vd cửa sổ toast bị hủy) thì báo lỗi thay vì treo vô hạn.
+  const r = await Promise.race([
+    c.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }),
+    sleep(15000).then(() => {
+      throw new Error('evalIn quá thời hạn (đích CDP có thể đã đóng): ' + expression.slice(0, 60))
+    }),
+  ])
   if (r.result?.exceptionDetails) throw new Error(JSON.stringify(r.result.exceptionDetails))
   return r.result.result.value
 }
@@ -158,48 +164,117 @@ try {
   check('Notification.permission luôn là granted', (await evalIn(vc[0], 'Notification.permission')) === 'granted')
   check('requestPermission resolve granted', (await evalIn(vc[0], `Notification.requestPermission()`)) === 'granted')
 
-  // ---------- 4. shim → main → badge fallback (account B đang ẩn? A đang ẩn ở chế độ đơn) ----------
-  const before = (await state()).unread[A.id]
-  // View của A (không hiển thị) bắn một thông báo
-  let aIdx = -1
+  // ---------- 4. shim → main → badge ----------
   for (let i = 0; i < vc.length; i++) {
-    const vis = await evalIn(vc[i], `document.visibilityState`)
-    console.log(`INFO  view ${i} visibilityState = ${vis}`)
+    console.log(`INFO  view ${i} visibilityState = ${await evalIn(vc[i], 'document.visibilityState')}`)
   }
-  // Xác định view nào thuộc account nào bằng cách bắn thông báo từ cả hai và xem unread đổi ở đâu
-  for (let i = 0; i < vc.length; i++) {
-    await evalIn(vc[i], `new Notification('Nam', { body: 'Xin chào' }); 1`)
-  }
+  // Thứ tự đích CDP không cố định: xác định view nào thuộc A bằng cách bắn thử, chỉ view của A mới làm unread[A] tăng.
+  await evalIn(vc[0], `new Notification('Nam', { body: 'Xin chào' }); 1`)
   await sleep(800)
   s = await state()
-  console.log('INFO  unread sau thông báo =', JSON.stringify(s.unread))
-  aIdx = s.unread[A.id] > before ? 0 : -1
+  const hiddenIdx = s.unread[A.id] > 0 ? 0 : 1 // view của account A (đang ở nền)
+  await evalIn(vc[1], `new Notification('Nam', { body: 'Xin chào' }); 1`) // view còn lại cũng bắn một lần
+  await sleep(800)
+  s = await state()
+  console.log('INFO  unread sau thông báo =', JSON.stringify(s.unread), '| hiddenIdx =', hiddenIdx)
   check('thông báo từ view ẩn tăng badge fallback đúng account', s.unread[A.id] === 1, JSON.stringify(s.unread))
-  check('thông báo từ view đang hiển thị (cửa sổ focus) không tăng badge', s.unread[B.id] === 0 || s.unread[B.id] === undefined, JSON.stringify(s.unread))
-  check('tổng chưa đọc khớp', s.totalUnread === 1, String(s.totalUnread))
+  // Account đang hiển thị: 0 nếu cửa sổ đang focus (đã xem), 1 nếu cửa sổ không focus. Cả hai đều đúng thiết kế.
+  check('account đang hiển thị: 0 (đang xem) hoặc 1 (cửa sổ không focus)', s.unread[B.id] === 0 || s.unread[B.id] === 1, JSON.stringify(s.unread))
+  check('tổng chưa đọc = tổng từng account', s.totalUnread === s.unread[A.id] + s.unread[B.id], String(s.totalUnread))
 
   // ---------- toast riêng của DuoChat ----------
+  const toastList = async () => (await targets()).filter((x) => x.type === 'page' && x.url.includes('toast.html'))
   const toastTargets = await waitFor(async () => {
-    const t = (await targets()).filter((x) => x.type === 'page' && x.url.includes('toast.html'))
+    const t = await toastList()
     return t.length ? t : null
   }, 10000, 'cửa sổ toast')
   check('có toast cho account ở nền (mỗi account một thẻ)', toastTargets.length >= 1, `${toastTargets.length} toast`)
-  const tc = await connect(toastTargets[0].webSocketDebuggerUrl)
-  await sleep(500)
+  // Tìm thẻ của account A theo tên hiển thị; giữ thẻ lại (hover) để hẹn giờ 7s không đóng nó giữa chừng.
+  let tc = null
+  for (const t of toastTargets) {
+    const c = await connect(t.webSocketDebuggerUrl)
+    await sleep(300)
+    if (/Cá nhân/.test(await evalIn(c, 'document.getElementById("card").innerText'))) { tc = c; break }
+    c.close()
+  }
+  if (!tc) throw new Error('không tìm thấy thẻ toast của account A')
+  await evalIn(tc, 'window.duochatToast.hover(true); 1')
   const toastText = await evalIn(tc, 'document.getElementById("card").innerText')
   console.log('INFO  nội dung toast =', JSON.stringify(toastText))
   check('toast hiện tên account, chữ cái avatar và "Có tin nhắn mới"', /Có tin nhắn mới/.test(toastText) && /(Cá nhân|Công ty)/.test(toastText))
   check('toast mặc định ẨN nội dung tin (không lộ "Xin chào" / tên người gửi)', !/Xin chào|Nam/.test(toastText), toastText)
   // gom tin: bắn thêm 2 thông báo từ view ẩn → vẫn một thẻ, số đếm tăng
-  const hiddenIdx = s.unread[A.id] > 0 ? 1 : 0
   for (let i = 0; i < 2; i++) await evalIn(vc[hiddenIdx], `new Notification('Nam', { body: 'Tin tiếp' }); 1`)
   await sleep(800)
   const same = (await targets()).filter((x) => x.type === 'page' && x.url.includes('toast.html'))
-  check('nhiều tin cùng account gom vào cùng một thẻ', same.length === toastTargets.length, `${same.length} thẻ`)
+  check('nhiều tin cùng account gom vào cùng một thẻ (không sinh thêm thẻ)', same.length === toastTargets.length, `${same.length} thẻ`)
   const merged = await evalIn(tc, 'document.getElementById("card").innerText')
   check('thẻ gom hiện "3 tin nhắn mới" và số đếm 3', /3 tin nhắn mới/.test(merged) && /\b3\b/.test(merged), JSON.stringify(merged))
   tc.close()
-  void aIdx
+
+  // ---------- phát hiện cần đăng nhập (chỉ xét URL) ----------
+  const loginState = await waitFor(async () => {
+    const st = await state()
+    return st.needsLogin[A.id] && st.needsLogin[B.id] ? st : null
+  }, 20000, 'needsLogin').catch(() => null)
+  s = loginState || (await state())
+  check('trang đăng nhập → needsLogin = true cho cả hai account', s.needsLogin[A.id] === true && s.needsLogin[B.id] === true, JSON.stringify(s.needsLogin))
+
+  // ---------- không làm phiền theo khung giờ ----------
+  const pad = (n) => String(n).padStart(2, '0')
+  const nowD = new Date()
+  const hhmm = (d) => pad(d.getHours()) + ':' + pad(d.getMinutes())
+  const dndOn = { enabled: true, from: hhmm(new Date(nowD.getTime() - 3600e3)), to: hhmm(new Date(nowD.getTime() + 3600e3)) }
+  // đóng thẻ toast đang có (bấm nút ×) rồi bật DND cho account ở nền
+  for (const t of (await targets()).filter((x) => x.type === 'page' && x.url.includes('toast.html'))) {
+    try {
+      const c = await connect(t.webSocketDebuggerUrl)
+      await Promise.race([evalIn(c, 'document.getElementById("close").click(); 1'), sleep(2500)])
+      c.close()
+    } catch {
+      /* thẻ đã tự đóng */
+    }
+  }
+  await sleep(600)
+  await api(`setDnd('${A.id}', ${JSON.stringify(dndOn)})`)
+  const unreadBeforeDnd = (await state()).unread[A.id]
+  await evalIn(vc[hiddenIdx], `new Notification('Nam', { body: 'Trong DND' }); 1`)
+  await sleep(1000)
+  const toastsDuringDnd = (await targets()).filter((x) => x.type === 'page' && x.url.includes('toast.html'))
+  check('trong khung DND: không hiện toast', toastsDuringDnd.length === 0, String(toastsDuringDnd.length))
+  check('trong khung DND: badge vẫn đếm', (await state()).unread[A.id] === unreadBeforeDnd + 1, JSON.stringify((await state()).unread))
+  await api(`setDnd('${A.id}', { enabled: false, from: '22:00', to: '07:00' })`)
+  await evalIn(vc[hiddenIdx], `new Notification('Nam', { body: 'Hết DND' }); 1`)
+  const toastBack = await waitFor(async () => (await targets()).some((x) => x.type === 'page' && x.url.includes('toast.html')), 6000, 'toast sau DND').catch(() => false)
+  check('ngoài DND: toast hiện lại', toastBack === true)
+
+  // ---------- khóa PIN ----------
+  check('PIN không hợp lệ bị từ chối', (await api(`setPin('12')`)).error === 'invalid')
+  check('đặt PIN 1234', (await api(`setPin('1234')`)).ok === true && (await state()).lock.enabled === true)
+  await api('lockNow()')
+  s = await state()
+  check('khóa ngay: locked = true', s.lock.locked === true)
+  const activeBefore = s.layout.activeAccountId
+  await api(`selectAccount('${activeBefore === A.id ? B.id : A.id}')`)
+  await api('toggleSplit()')
+  s = await state()
+  check('đang khóa: không đổi được account/layout', s.layout.activeAccountId === activeBefore && s.layout.mode === 'single')
+  check('PIN sai không mở được', (await api(`unlock('0000')`)).ok === false && (await state()).lock.locked === true)
+  const okUnlock = await api(`unlock('1234')`)
+  check('PIN đúng mở khóa', okUnlock.ok === true && (await state()).lock.locked === false)
+  await api('lockNow()')
+  let last
+  for (let i = 0; i < 6; i++) last = await api(`unlock('9999')`)
+  check('sai 6 lần: bị bắt chờ', last.retryAfterMs > 0, JSON.stringify(last))
+  const during = await api(`unlock('1234')`)
+  check('đang bị chờ: PIN đúng cũng bị từ chối', during.ok === false && during.error === 'wait', JSON.stringify(during))
+  await sleep(Math.min(during.retryAfterMs, 4000) + 300)
+  check('hết thời gian chờ: PIN đúng mở được', (await api(`unlock('1234')`)).ok === true)
+  check('đổi PIN cần PIN hiện tại', (await api(`setPin('5678', '0000')`)).ok === false)
+  check('tắt khóa bằng PIN đúng', (await api(`removePin('1234')`)).ok === true && (await state()).lock.enabled === false)
+  await sleep(800)
+  const rawSettings = fs.readFileSync(path.join(userData, 'settings.json'), 'utf8')
+  check('settings.json không chứa PIN dạng rõ', !/1234|5678|9999/.test(rawSettings))
 
   // ---------- 5. split, layout, bounds thật ----------
   const contentSize = await evalIn(sh, `[window.innerWidth, window.innerHeight]`)
@@ -306,6 +381,10 @@ try {
   await stop(app)
   const saved = JSON.parse(fs.readFileSync(savedPath, 'utf8'))
   check('sau khi thoát: schemaVersion 2, 2 account, đã đổi tên + sắp xếp', saved.schemaVersion === 2 && saved.accounts.length === 2 && saved.accounts[0].id === B.id && saved.accounts[1].name === 'Cá nhân 2')
+  const logFile = path.join(userData, 'logs', 'duochat.log')
+  const logText = fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8') : ''
+  check('có nhật ký kỹ thuật (app_start, locked…)', /app_start/.test(logText) && /locked/.test(logText), logFile)
+  check('nhật ký không chứa nội dung tin/PIN', !/Xin chào|Tin tiếp|Trong DND|Hết DND|Nam|1234|9999/.test(logText))
   const partDir = path.join(userData, 'Partitions')
   const parts = fs.existsSync(partDir) ? fs.readdirSync(partDir) : []
   console.log('INFO  Partitions trên đĩa =', parts)
@@ -335,6 +414,14 @@ try {
 } catch (e) {
   failures++
   console.log('FAIL  lỗi không mong đợi:', e.message)
+  // Chẩn đoán: các đích CDP còn lại và nhật ký kỹ thuật (không chứa nội dung chat).
+  try {
+    console.log('INFO  đích CDP:', (await targets()).map((t) => `${t.type}:${t.url.slice(0, 50)}`).join(' | '))
+    const lf = path.join(userData, 'logs', 'duochat.log')
+    if (fs.existsSync(lf)) console.log('INFO  nhật ký:\n' + fs.readFileSync(lf, 'utf8'))
+  } catch {
+    /* app đã thoát */
+  }
 } finally {
   await stop(app).catch(() => undefined)
   fs.rmSync(userData, { recursive: true, force: true })

@@ -1,8 +1,10 @@
 import path from 'node:path'
-import { app, BrowserWindow, Menu, screen } from 'electron'
+import { app, BrowserWindow, Menu, powerMonitor, screen } from 'electron'
 import { IPC } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
 import { AccountManager } from './accounts'
+import { isInDnd } from './dnd'
+import { Logger } from './logger'
 import { updateTaskbarBadge } from './badge'
 import { cleanupOrphanPartitions } from './cleanup'
 import { registerIpc } from './ipc'
@@ -63,7 +65,9 @@ function start(): void {
 
   const win = createMainWindow(store, isDev)
   mainWindow = win
-  const manager = new AccountManager(win, store, isDev)
+  const log = new Logger(path.join(userData, 'logs'))
+  log.info('app_start', { version: app.getVersion(), electron: process.versions.electron })
+  const manager = new AccountManager(win, store, isDev, log)
   let isQuitting = false
 
   const applyLoginItem = (): void => {
@@ -113,7 +117,27 @@ function start(): void {
   manager.onNotice((key) => win.webContents.send(IPC.notice, key))
 
   registerIpc(win, manager, store, applyLoginItem)
-  setupNotifications(manager, toasts, () => store.get().notifyPreview)
+  // Đang khóa thì không bao giờ lộ nội dung tin trong toast.
+  setupNotifications(manager, toasts, () => store.get().notifyPreview && !manager.isLocked())
+  manager.onSessionExpired((id) => {
+    const account = manager.getAccount(id)
+    if (account && !account.muted && !isInDnd(account.dnd, new Date())) {
+      toasts.show(account, { title: '', body: '' }, false, 'login')
+    }
+  })
+
+  // Tự khóa khi máy không có thao tác đủ lâu, hoặc khi Windows bị khóa.
+  setInterval(() => {
+    const { enabled, autoLockMinutes } = store.get().lock
+    if (
+      enabled &&
+      autoLockMinutes > 0 &&
+      powerMonitor.getSystemIdleTime() >= autoLockMinutes * 60
+    ) {
+      manager.lockNow()
+    }
+  }, 15_000)
+  powerMonitor.on('lock-screen', () => manager.lockNow())
   attachShortcuts(win.webContents, isDev, (action) => manager.handleShortcut(action))
 
   // Sidebar chỉ là giao diện của app: không cho điều hướng/mở cửa sổ đi đâu khác.

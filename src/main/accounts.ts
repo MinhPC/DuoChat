@@ -10,12 +10,13 @@ import {
 } from 'electron'
 // ?raw: shim được đóng gói thành chuỗi và main tự chạy bằng executeJavaScript (mục 4).
 import shimSource from '../inject/notification-shim.js?raw'
-import type { AppState, NoticeKey, Prefs } from '../shared/ipc'
+import type { AppState, NoticeKey, PinResult, Prefs } from '../shared/ipc'
 import {
   ACCOUNT_PALETTE,
   MAX_ZOOM,
   MIN_ZOOM,
   type Account,
+  type DndSchedule,
   type LayoutSettings,
   type Pane,
   type Rect,
@@ -34,8 +35,11 @@ import {
   visibleAccountIds,
 } from './layoutActions'
 import { attachLinkHandling } from './links'
+import { createLock, isValidPin, retryDelayMs, verifyPin } from './lock'
+import type { Logger } from './logger'
 import { applyPermissionHandlers } from './permissions'
 import { buildUserAgent, partitionFor, ZALO_SERVICE } from './service'
+import { isLoginPage } from './session'
 import { attachShortcuts, type ShortcutAction } from './shortcuts'
 import type { SettingsStore } from './store'
 import {
@@ -49,6 +53,7 @@ import {
 
 const ZOOM_STEP = 0.1
 const MAX_NAME = 40
+const LOGGED_IN_STABLE_MS = 8000
 
 /**
  * Giữ một WebContentsView sống cho mỗi account (không destroy khi đổi tab để vẫn nhận tin),
@@ -62,6 +67,14 @@ export class AccountManager {
   private overlayOpen = false
   private dragging = false
   private narrowWarned = false
+  private locked = false
+  private pinFailures = 0
+  private retryUntil = 0
+  private readonly needsLogin = new Map<string, boolean>()
+  private readonly wasLoggedIn = new Set<string>()
+  private readonly loggedInTimers = new Map<string, NodeJS.Timeout>()
+  private readonly pageInfo = new Map<string, { url: string; title: string }>()
+  private sessionListeners = new Set<(accountId: string) => void>()
   private readonly userAgent = buildUserAgent(session.defaultSession.getUserAgent(), app.getName())
   private changeListeners = new Set<() => void>()
   private noticeListeners = new Set<(key: NoticeKey) => void>()
@@ -70,6 +83,7 @@ export class AccountManager {
     private readonly win: BrowserWindow,
     private readonly store: SettingsStore,
     private readonly isDev: boolean,
+    private readonly log: Logger,
   ) {}
 
   // ---------- đăng ký lắng nghe ----------
@@ -82,6 +96,11 @@ export class AccountManager {
     this.noticeListeners.add(cb)
   }
 
+  /** Phiên Zalo của account hết hạn (đang dùng bình thường rồi bị đưa về trang đăng nhập). */
+  onSessionExpired(cb: (accountId: string) => void): void {
+    this.sessionListeners.add(cb)
+  }
+
   private emit(): void {
     for (const cb of this.changeListeners) cb()
   }
@@ -90,6 +109,8 @@ export class AccountManager {
 
   init(): void {
     for (const account of this.store.get().accounts) this.createView(account)
+    // Có PIN thì app luôn khởi động ở trạng thái khóa.
+    this.locked = this.store.get().lock.enabled
     this.applyLayout()
     this.focusActiveView()
   }
@@ -131,15 +152,21 @@ export class AccountManager {
     wc.on('before-mouse-event', (_e, mouse) => {
       if (mouse.type === 'mouseDown') this.onViewFocus(account.id)
     })
+    wc.on('did-navigate', (_e, url) => this.onNavigated(account.id, url))
+    wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
+      if (isMainFrame) this.onNavigated(account.id, url)
+    })
     wc.on('did-fail-load', (_e, code, _desc, _url, isMainFrame) => {
       // -3 = bị hủy do điều hướng khác. Mất mạng thì thử lại thay vì để khung trắng.
       if (isMainFrame && code !== -3) {
+        this.log.info('view_load_failed', { account: account.id, code })
         setTimeout(() => {
           if (!wc.isDestroyed()) void wc.loadURL(ZALO_SERVICE.url)
         }, 5000)
       }
     })
-    wc.on('render-process-gone', () => {
+    wc.on('render-process-gone', (_e, details) => {
+      this.log.info('render_process_gone', { account: account.id, reason: details.reason })
       setTimeout(() => {
         if (!wc.isDestroyed()) wc.reload()
       }, 1000)
@@ -168,6 +195,9 @@ export class AccountManager {
     this.accountByWc.delete(view.webContents.id)
     this.views.delete(id)
     this.unread.delete(id)
+    this.needsLogin.delete(id)
+    this.pageInfo.delete(id)
+    this.forgetLoggedIn(id)
     this.win.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
   }
@@ -195,7 +225,7 @@ export class AccountManager {
 
   /** Account đang hiển thị trên màn hình và cửa sổ đang focus → người dùng đang nhìn thấy. */
   isSeen(id: string): boolean {
-    if (this.overlayOpen) return false
+    if (this.overlayOpen || this.locked) return false
     if (!this.win.isVisible() || this.win.isMinimized() || !this.win.isFocused()) return false
     return visibleAccountIds(this.store.get().layout).includes(id)
   }
@@ -229,10 +259,18 @@ export class AccountManager {
       zoomFactor: s.zoomFactor,
       notifyPreview: s.notifyPreview,
     }
+    const needsLogin: Record<string, boolean> = {}
+    for (const a of s.accounts) needsLogin[a.id] = this.needsLogin.get(a.id) ?? false
     return {
       accounts: s.accounts,
       layout: s.layout,
       unread,
+      needsLogin,
+      lock: {
+        enabled: s.lock.enabled,
+        locked: this.locked,
+        autoLockMinutes: s.lock.autoLockMinutes,
+      },
       totalUnread: this.totalUnread(),
       frames: L.frames,
       divider: L.divider,
@@ -245,6 +283,7 @@ export class AccountManager {
   // ---------- unread & thông báo ----------
 
   private onTitle(id: string, title: string): void {
+    this.updatePage(id, { title })
     const cur = this.unread.get(id)
     if (!cur) return
     this.unread.set(id, applyTitle(cur, title))
@@ -281,7 +320,7 @@ export class AccountManager {
       mode: s.layout.mode,
       splitRatio: s.layout.splitRatio,
     })
-    const hidden = this.overlayOpen || this.dragging
+    const hidden = this.overlayOpen || this.dragging || this.locked
     for (const [id, view] of this.views) {
       let rect: Rect | null = null
       if (!hidden) {
@@ -313,7 +352,7 @@ export class AccountManager {
   }
 
   focusActiveView(): void {
-    if (this.overlayOpen || this.dragging) return
+    if (this.overlayOpen || this.dragging || this.locked) return
     const id = focusedAccountId(this.store.get().layout)
     const view = id ? this.views.get(id) : undefined
     if (view && !view.webContents.isDestroyed()) view.webContents.focus()
@@ -341,7 +380,7 @@ export class AccountManager {
   }
 
   select(id: string, opts: { swapIfOther: boolean }): void {
-    if (!this.views.has(id)) return
+    if (this.locked || !this.views.has(id)) return
     this.mutateLayout((l) => selectAccount(l, id, opts))
   }
 
@@ -402,6 +441,7 @@ export class AccountManager {
       order: s.accounts.length,
       muted: false,
       sound: 'default',
+      dnd: { enabled: false, from: '22:00', to: '07:00' },
       createdAt: new Date().toISOString(),
     }
     this.store.update((d) => ({ ...d, accounts: [...d.accounts, account] }))
@@ -412,7 +452,7 @@ export class AccountManager {
 
   patchAccount(
     id: string,
-    patch: Partial<Pick<Account, 'name' | 'color' | 'muted' | 'sound'>>,
+    patch: Partial<Pick<Account, 'name' | 'color' | 'muted' | 'sound' | 'dnd'>>,
   ): void {
     this.store.update((s) => ({
       ...s,
@@ -424,6 +464,7 @@ export class AccountManager {
         if (typeof patch.color === 'string') next.color = patch.color
         if (typeof patch.muted === 'boolean') next.muted = patch.muted
         if (patch.sound) next.sound = patch.sound
+        if (patch.dnd) next.dnd = patch.dnd
         return next
       }),
     }))
@@ -448,6 +489,7 @@ export class AccountManager {
     await ses.clearStorageData()
     await ses.clearCache()
     this.unread.set(id, emptyTracking())
+    this.forgetLoggedIn(id) // đăng xuất chủ động không phải "phiên hết hạn"
     if (!view.webContents.isDestroyed()) void view.webContents.loadURL(ZALO_SERVICE.url)
     this.emit()
   }
@@ -475,6 +517,130 @@ export class AccountManager {
     this.preparedSessions.delete(partitionFor(id))
   }
 
+  // ---------- trạng thái đăng nhập ----------
+
+  private onNavigated(id: string, url: string): void {
+    this.updatePage(id, { url })
+  }
+
+  /** Cập nhật URL/tiêu đề trang của account và suy ra trạng thái cần đăng nhập. */
+  private updatePage(id: string, patch: { url?: string; title?: string }): void {
+    const info = { url: '', title: '', ...this.pageInfo.get(id), ...patch }
+    this.pageInfo.set(id, info)
+    const login = isLoginPage(info.url, info.title)
+    let host = ''
+    try {
+      host = new URL(info.url).hostname
+    } catch {
+      /* bỏ qua */
+    }
+    // Tài khoản mới vào chat.zalo.me rồi mới bị chuyển sang trang đăng nhập, nên chỉ coi là "đã đăng nhập"
+    // khi ở lại chat.zalo.me ổn định một lúc; nếu không sẽ báo nhầm phiên hết hạn cho tài khoản chưa đăng nhập.
+    if (login) this.clearLoggedInTimer(id)
+    else if (host === 'chat.zalo.me' && !this.wasLoggedIn.has(id) && !this.loggedInTimers.has(id)) {
+      this.loggedInTimers.set(
+        id,
+        setTimeout(() => {
+          this.loggedInTimers.delete(id)
+          this.wasLoggedIn.add(id)
+        }, LOGGED_IN_STABLE_MS),
+      )
+    }
+    if (login === (this.needsLogin.get(id) ?? false)) return
+    this.needsLogin.set(id, login)
+    if (login && this.wasLoggedIn.has(id)) {
+      this.log.info('session_expired', { account: id })
+      for (const cb of this.sessionListeners) cb(id)
+    }
+    this.emit()
+  }
+
+  private clearLoggedInTimer(id: string): void {
+    const t = this.loggedInTimers.get(id)
+    if (t) clearTimeout(t)
+    this.loggedInTimers.delete(id)
+  }
+
+  private forgetLoggedIn(id: string): void {
+    this.clearLoggedInTimer(id)
+    this.wasLoggedIn.delete(id)
+  }
+
+  // ---------- khóa PIN (chỉ khóa giao diện, không mã hóa dữ liệu) ----------
+
+  isLocked(): boolean {
+    return this.locked
+  }
+
+  /** Kiểm tra PIN có giới hạn thử: sai nhiều lần thì phải chờ. */
+  private attemptPin(pin: unknown): PinResult {
+    const now = Date.now()
+    if (now < this.retryUntil)
+      return { ok: false, error: 'wait', retryAfterMs: this.retryUntil - now }
+    if (verifyPin(this.store.get().lock, pin)) {
+      this.pinFailures = 0
+      return { ok: true, retryAfterMs: 0 }
+    }
+    this.pinFailures += 1
+    const delay = retryDelayMs(this.pinFailures)
+    this.retryUntil = now + delay
+    this.log.info('pin_failed', { failures: this.pinFailures })
+    return { ok: false, error: 'wrong', retryAfterMs: delay }
+  }
+
+  lockNow(): void {
+    if (!this.store.get().lock.enabled || this.locked) return
+    this.locked = true
+    this.log.info('locked')
+    this.applyLayout()
+    this.emit()
+  }
+
+  unlock(pin: unknown): PinResult {
+    const r = this.attemptPin(pin)
+    if (r.ok) {
+      this.locked = false
+      this.log.info('unlocked')
+      this.applyLayout()
+      this.focusActiveView()
+      this.markSeen()
+      this.emit()
+    }
+    return r
+  }
+
+  /** Đặt hoặc đổi PIN. Đang có PIN thì phải nhập đúng PIN hiện tại. */
+  setPin(pin: unknown, current: unknown): PinResult {
+    if (!isValidPin(pin)) return { ok: false, error: 'invalid', retryAfterMs: 0 }
+    if (this.store.get().lock.enabled) {
+      const r = this.attemptPin(current)
+      if (!r.ok) return r
+    }
+    this.store.update((s) => ({ ...s, lock: createLock(pin, s.lock.autoLockMinutes) }))
+    this.log.info('pin_set')
+    this.emit()
+    return { ok: true, retryAfterMs: 0 }
+  }
+
+  removePin(pin: unknown): PinResult {
+    if (!this.store.get().lock.enabled) return { ok: true, retryAfterMs: 0 }
+    const r = this.attemptPin(pin)
+    if (!r.ok) return r
+    this.store.update((s) => ({ ...s, lock: { ...s.lock, enabled: false, salt: '', hash: '' } }))
+    this.log.info('pin_removed')
+    this.emit()
+    return r
+  }
+
+  setAutoLock(minutes: number): void {
+    this.store.update((s) => ({ ...s, lock: { ...s.lock, autoLockMinutes: minutes } }))
+    this.emit()
+  }
+
+  setDnd(id: string, dnd: DndSchedule): void {
+    this.patchAccount(id, { dnd })
+  }
+
   // ---------- zoom, reload, phím tắt ----------
 
   setZoom(factor: number): void {
@@ -492,6 +658,7 @@ export class AccountManager {
   }
 
   handleShortcut(action: ShortcutAction): void {
+    if (this.locked) return
     const zoom = this.store.get().zoomFactor
     switch (action.type) {
       case 'selectIndex':

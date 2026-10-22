@@ -49,16 +49,29 @@ Các phím khác đi thẳng vào Zalo.
 - Thông báo là thẻ nhỏ riêng của DuoChat ở góc dưới-phải màn hình (không cướp focus): avatar màu và tên tài khoản, số tin mới.
   Nhiều tin cùng tài khoản được gom vào một thẻ; bấm thẻ để mở đúng tài khoản, rê chuột vào để giữ thẻ lại.
 - **Mặc định ẩn nội dung tin** (chỉ hiện "Có tin nhắn mới"); bật "Hiện nội dung tin nhắn trong thông báo" trong Cài đặt nếu muốn.
+- **Không làm phiền:** chuột phải avatar → Không làm phiền… để đặt khung giờ (có thể qua nửa đêm, vd 22:00 → 07:00). Trong khung giờ này không hiện thẻ thông báo, số chưa đọc vẫn đếm.
 - Âm báo chọn theo từng tài khoản (chuột phải avatar → Âm báo: Mặc định / Nhẹ / Không âm).
 - Tài khoản đã tắt thông báo hoặc đang hiển thị (khi cửa sổ đang focus) thì không hiện thẻ, nhưng số chưa đọc vẫn được đếm.
 - Số chưa đọc hiện trên avatar, trên icon taskbar và trong tooltip khay hệ thống.
 - Bấm X chỉ ẩn xuống khay (có thể tắt trong Cài đặt). Chọn **Thoát** ở menu khay để thoát thật.
 
+### Khóa ứng dụng bằng PIN
+
+Bật trong Cài đặt (PIN 4–8 chữ số, có thể tự khóa khi máy không thao tác 1–30 phút hoặc khi Windows bị khóa; nút 🔒 ở thanh bên để khóa ngay). Khi khóa, các khung Zalo bị ẩn và thẻ thông báo không hiện nội dung. Nhập sai từ lần thứ 6 sẽ phải chờ (1s, 2s, 4s … tối đa 30s). PIN được lưu dạng băm scrypt có salt, không lưu dạng rõ.
+
+> **PIN chỉ khóa giao diện, KHÔNG mã hóa dữ liệu.** Người có quyền truy cập ổ đĩa vẫn đọc được dữ liệu đăng nhập trong `%APPDATA%DuoChat`.
+
+### Phiên đăng nhập
+
+Phiên Zalo được giữ sau khi tắt app (đã kiểm chứng: cookie xác thực là persistent). Khi Zalo bắt đăng nhập lại (hết hạn phía máy chủ), avatar hiện dấu **!** màu cam và có thẻ báo "Cần đăng nhập lại"; chỉ cần quét lại mã QR.
+
+### Nhật ký lỗi
+
+`%APPDATA%DuoChatlogsduochat.log` (xoay vòng ở 1 MB) chỉ ghi sự kiện kỹ thuật như khởi động, lỗi tải trang, khóa/mở khóa. Không bao giờ ghi nội dung tin nhắn, cookie hay PIN; không gửi đi đâu.
+
 ## Giới hạn đã biết
 
-- **Có thể phải quét lại QR sau khi tắt app.** Nếu Zalo Web dùng cookie phiên (không có hạn), phiên có thể mất khi
-  thoát. DuoChat ghi dữ liệu ra đĩa trước khi thoát và **không** sao chép cookie hay giả lập để vượt cơ chế của Zalo.
-  Tình trạng thực tế cần xác nhận bằng cách đăng nhập thật (xem `docs/spike-windows.md`).
+- DuoChat **không** sao chép cookie hay giả lập để vượt cơ chế của Zalo. Nếu Zalo hết hạn phiên thì phải quét lại QR.
 - Mỗi tài khoản tốn khoảng 200–400 MB RAM. Giới hạn mềm là 6 tài khoản; thêm tài khoản thứ 7 chỉ bị cảnh báo.
 - Màn hình hẹp: mỗi pane nên rộng từ 700px, nếu không Zalo Web có thể bị chật.
 - Gọi thoại/video trên Zalo Web chưa được kiểm tra.

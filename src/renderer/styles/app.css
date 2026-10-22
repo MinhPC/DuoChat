@@ -112,6 +112,21 @@ button {
   text-align: center;
 }
 
+.login-mark {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
 .muted-mark {
   position: absolute;
   bottom: -4px;
@@ -330,4 +345,86 @@ button {
   border: 1px solid var(--line);
   border-radius: 10px;
   cursor: pointer;
+}
+
+/* ---- khóa PIN ---- */
+.lock-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+
+.lock-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 300px;
+  text-align: center;
+}
+
+.lock-box h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.lock-box input {
+  width: 100%;
+  padding: 12px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 22px;
+  letter-spacing: 0.4em;
+  text-align: center;
+}
+
+.lock-box input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.lock-error {
+  min-height: 20px;
+  margin: 0;
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.section h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.dialog select,
+.dialog input[type='time'],
+.dialog input[type='password'] {
+  padding: 8px 10px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.row > label {
+  flex: 1;
 }

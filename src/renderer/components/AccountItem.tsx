@@ -1,9 +1,11 @@
+import { vi } from '../../shared/i18n/vi'
 import type { Account } from '../../shared/types'
 
 interface Props {
   account: Account
   index: number
   unread: number
+  needsLogin: boolean
   shown: boolean
   focused: boolean
   onSelect: () => void
@@ -19,7 +21,7 @@ export function AccountItem(p: Props): React.JSX.Element {
   return (
     <button
       className={cls}
-      title={`${account.name} (Ctrl+${p.index + 1})${account.muted ? ' 🔕' : ''}`}
+      title={`${account.name} (Ctrl+${p.index + 1})${account.muted ? ' 🔕' : ''}${p.needsLogin ? ` — ${vi.loginMark}` : ''}`}
       draggable
       onClick={p.onSelect}
       onContextMenu={(e) => {
@@ -35,6 +37,7 @@ export function AccountItem(p: Props): React.JSX.Element {
       </span>
       {p.unread > 0 && <span className="badge">{p.unread > 99 ? '99+' : p.unread}</span>}
       {account.muted && <span className="muted-mark">🔕</span>}
+      {p.needsLogin && <span className="login-mark">!</span>}
     </button>
   )
 }

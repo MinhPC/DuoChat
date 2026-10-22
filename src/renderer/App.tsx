@@ -2,11 +2,18 @@ import { useCallback, useEffect, useState } from 'react'
 import type { AppState } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
 import { AccountDialog } from './components/AccountDialog'
+import { DndDialog } from './components/DndDialog'
+import { LockScreen } from './components/LockScreen'
 import { SettingsDialog } from './components/SettingsDialog'
 import { Sidebar } from './components/Sidebar'
 import { Stage } from './components/Stage'
 
-type Dialog = { kind: 'add' } | { kind: 'rename'; accountId: string } | { kind: 'settings' } | null
+type Dialog =
+  | { kind: 'add' }
+  | { kind: 'rename'; accountId: string }
+  | { kind: 'dnd'; accountId: string }
+  | { kind: 'settings' }
+  | null
 
 export function App(): React.JSX.Element | null {
   const [state, setState] = useState<AppState | null>(null)
@@ -20,7 +27,9 @@ export function App(): React.JSX.Element | null {
     const offRename = window.duochat.onRequestRename((accountId) =>
       setDialog({ kind: 'rename', accountId }),
     )
+    const offDnd = window.duochat.onRequestDnd((accountId) => setDialog({ kind: 'dnd', accountId }))
     return () => {
+      offDnd()
       offState()
       offNotice()
       offRename()
@@ -61,7 +70,16 @@ export function App(): React.JSX.Element | null {
           onClose={closeDialog}
         />
       )}
-      {dialog?.kind === 'settings' && <SettingsDialog prefs={state.prefs} onClose={closeDialog} />}
+      {dialog?.kind === 'dnd' && (
+        <DndDialog
+          account={state.accounts.find((a) => a.id === dialog.accountId)}
+          onClose={closeDialog}
+        />
+      )}
+      {dialog?.kind === 'settings' && (
+        <SettingsDialog prefs={state.prefs} lock={state.lock} onClose={closeDialog} />
+      )}
+      {state.lock.locked && <LockScreen />}
       {toast && (
         <div className="toast" role="status" onClick={() => setToast(null)}>
           {toast}

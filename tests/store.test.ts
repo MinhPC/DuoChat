@@ -20,6 +20,7 @@ const acc = (id: string, order: number, extra = {}) => ({
   order,
   muted: false,
   sound: 'default' as const,
+  dnd: { enabled: false, from: '22:00', to: '07:00' },
   createdAt: '2026-01-01T00:00:00.000Z',
   ...extra,
 })

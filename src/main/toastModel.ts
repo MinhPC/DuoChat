@@ -36,9 +36,23 @@ export function buildToastView(opts: {
   title: string
   body: string
   playSound: boolean
+  /** `login`: thẻ báo phiên hết hạn (không phải tin nhắn). */
+  kind?: 'message' | 'login'
 }): ToastView {
   const { account, count, preview } = opts
   const hidden = vi.toast
+  if (opts.kind === 'login') {
+    return {
+      accountName: account.name,
+      color: account.color,
+      initial: initialOf(account.name),
+      title: hidden.loginRequired,
+      body: '',
+      count: 1,
+      sound: account.sound,
+      playSound: opts.playSound && account.sound !== 'off',
+    }
+  }
   return {
     accountName: account.name,
     color: account.color,

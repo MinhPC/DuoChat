@@ -3,10 +3,13 @@ import path from 'node:path'
 import {
   ACCOUNT_PALETTE,
   ACCOUNT_SOUNDS,
+  AUTO_LOCK_OPTIONS,
   MAX_ZOOM,
   MIN_ZOOM,
   type Account,
   type AccountSound,
+  type DndSchedule,
+  type LockSettings,
   type LayoutSettings,
   type Settings,
 } from '../shared/types'
@@ -31,10 +34,14 @@ export function defaultSettings(): Settings {
     minimizeToTray: true,
     zoomFactor: 1,
     notifyPreview: false,
+    lock: { enabled: false, salt: '', hash: '', autoLockMinutes: 5 },
     window: { width: 1280, height: 800, maximized: false },
     pendingPartitionCleanup: [],
   }
 }
+
+export const DEFAULT_DND: DndSchedule = { enabled: false, from: '22:00', to: '07:00' }
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
 
 type Json = Record<string, unknown>
 const isObj = (v: unknown): v is Json => typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -96,12 +103,38 @@ function normalizeAccounts(input: unknown): Account[] {
         sound: (ACCOUNT_SOUNDS as readonly unknown[]).includes(a.sound)
           ? (a.sound as AccountSound)
           : 'default',
+        dnd: normalizeDnd(a.dnd),
         createdAt: str(a.createdAt) ?? new Date(0).toISOString(),
       },
     })
   })
   list.sort((x, y) => x.acc.order - y.acc.order || x.idx - y.idx)
   return list.map((x, i) => ({ ...x.acc, order: i }))
+}
+
+function normalizeDnd(v: unknown): DndSchedule {
+  if (!isObj(v)) return { ...DEFAULT_DND }
+  return {
+    enabled: bool(v.enabled, false),
+    from: typeof v.from === 'string' && TIME_RE.test(v.from) ? v.from : DEFAULT_DND.from,
+    to: typeof v.to === 'string' && TIME_RE.test(v.to) ? v.to : DEFAULT_DND.to,
+  }
+}
+
+function normalizeLock(v: unknown): LockSettings {
+  const l = isObj(v) ? v : {}
+  const salt = typeof l.salt === 'string' ? l.salt : ''
+  const hash = typeof l.hash === 'string' ? l.hash : ''
+  const minutes = (AUTO_LOCK_OPTIONS as readonly unknown[]).includes(l.autoLockMinutes)
+    ? (l.autoLockMinutes as number)
+    : 5
+  // Bật khóa mà thiếu salt/hash thì coi như chưa bật (tránh tự khóa app không thể mở).
+  return {
+    enabled: bool(l.enabled, false) && salt !== '' && hash !== '',
+    salt,
+    hash,
+    autoLockMinutes: minutes,
+  }
 }
 
 function normalizeLayout(input: unknown, accounts: Account[]): LayoutSettings {
@@ -156,6 +189,7 @@ export function normalizeSettings(input: Json): Settings {
     startMinimized: bool(input.startMinimized, d.startMinimized),
     minimizeToTray: bool(input.minimizeToTray, d.minimizeToTray),
     notifyPreview: bool(input.notifyPreview, d.notifyPreview),
+    lock: normalizeLock(input.lock),
     zoomFactor: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, num(input.zoomFactor, d.zoomFactor))),
     window: {
       x: typeof w.x === 'number' ? w.x : undefined,
