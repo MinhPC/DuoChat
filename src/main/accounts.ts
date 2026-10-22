@@ -40,7 +40,7 @@ import { parseProfile, PROFILE_SCRIPT, toAvatarDataUrl } from './profile'
 import { createLock, isValidPin, retryDelayMs, verifyPin } from './lock'
 import type { Logger } from './logger'
 import { applyPermissionHandlers } from './permissions'
-import { buildUserAgent, isAllowedUrl, partitionFor, ZALO_SERVICE } from './service'
+import { buildUserAgent, partitionFor, ZALO_SERVICE } from './service'
 import { isLoginPage } from './session'
 import { attachShortcuts, type ShortcutAction } from './shortcuts'
 import type { SettingsStore } from './store'
@@ -534,8 +534,10 @@ export class AccountManager {
   /** Tải ảnh qua session của chính partition, thu nhỏ 96x96, trả data URL PNG (chỉ lưu cục bộ). */
   private async fetchAvatar(id: string, url: string): Promise<string | null> {
     try {
-      const res = await session.fromPartition(partitionFor(id)).fetch(url)
-      if (!res.ok || !isAllowedUrl(res.url)) return null // chuyển hướng ra ngoài allowlist thì bỏ
+      // `res.url` của session.fetch luôn rỗng nên không kiểm tra được đích sau chuyển hướng: cấm chuyển hướng.
+      // URL gốc đã qua allowlist trong parseProfile.
+      const res = await session.fromPartition(partitionFor(id)).fetch(url, { redirect: 'error' })
+      if (!res.ok) return null
       if (!(res.headers.get('content-type') ?? '').startsWith('image/')) return null
       const buf = Buffer.from(await res.arrayBuffer())
       if (buf.length === 0 || buf.length > MAX_AVATAR_BYTES) return null
