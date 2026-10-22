@@ -2,7 +2,7 @@
 
 > Tên dự án tạm: **DuoChat**. Không dùng chữ "Zalo" trong tên app và icon để tránh vấn đề thương hiệu.
 > Tài liệu này là đặc tả cho Claude Code. Đọc hết trước khi code. Làm đúng thứ tự ở mục 7 và **dừng lại ở các điểm kiểm tra (⛔)** để báo cáo.
-> Phiên bản spec: **v4** (2026-10-22). v4: cho phép đọc tên + ảnh đại diện của chính tài khoản, tự động sau khi đăng nhập hoặc khi người dùng bấm nút (mục 4.3), `schemaVersion` 3. v2 đã thêm: split view vào MVP, chặn và định tuyến thông báo, chống throttle view nền, phím tắt, menu chuột phải, rủi ro mất phiên. v3: app mobile chỉ làm cho **iOS** (bỏ Android), thêm so sánh phương án giống Zalo gốc (mục 3.2); R1 đã kiểm chứng không xảy ra.
+> Phiên bản spec: **v5** (2026-10-22). v5: đồng bộ với code (khóa PIN, Không làm phiền, tự cập nhật, thẻ thông báo riêng đã làm xong; mục 2.6 chỉ còn việc chưa làm), chặn `will-redirect`, backoff khi view lỗi. v4: cho phép đọc tên + ảnh đại diện của chính tài khoản, tự động sau khi đăng nhập hoặc khi người dùng bấm nút (mục 4.3), `schemaVersion` 3. v2 đã thêm: split view vào MVP, chặn và định tuyến thông báo, chống throttle view nền, phím tắt, menu chuột phải, rủi ro mất phiên. v3: app mobile chỉ làm cho **iOS** (bỏ Android), thêm so sánh phương án giống Zalo gốc (mục 3.2); R1 đã kiểm chứng không xảy ra.
 
 ---
 

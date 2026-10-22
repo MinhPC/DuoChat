@@ -59,7 +59,7 @@ Các phím khác đi thẳng vào Zalo.
 
 Bật trong Cài đặt (PIN 4–8 chữ số, có thể tự khóa khi máy không thao tác 1–30 phút hoặc khi Windows bị khóa; nút 🔒 ở thanh bên để khóa ngay). Khi khóa, các khung Zalo bị ẩn và thẻ thông báo không hiện nội dung. Nhập sai từ lần thứ 6 sẽ phải chờ (1s, 2s, 4s … tối đa 30s). PIN được lưu dạng băm scrypt có salt, không lưu dạng rõ.
 
-> **PIN chỉ khóa giao diện, KHÔNG mã hóa dữ liệu.** Người có quyền truy cập ổ đĩa vẫn đọc được dữ liệu đăng nhập trong `%APPDATA%DuoChat`.
+> **PIN chỉ khóa giao diện, KHÔNG mã hóa dữ liệu.** Người có quyền truy cập ổ đĩa vẫn đọc được dữ liệu đăng nhập trong `%APPDATA%\DuoChat`.
 
 ### Phiên đăng nhập
 
@@ -72,11 +72,11 @@ khoản (chuột phải avatar → Nội dung tin trong thông báo).
 
 **Tự cập nhật mặc định tắt** vì DuoChat cam kết không gửi dữ liệu ra ngoài. Bật trong Cài đặt thì app kiểm tra GitHub
 Releases (`MinhPC/DuoChat`) mỗi 6 giờ, chỉ tải file `latest.yml`. Chỉ áp dụng cho bản cài đặt, không áp dụng cho bản
-portable. Để phát hành: đặt `GH_TOKEN` rồi chạy `npx electron-builder --win --x64 --publish always`.
+portable. Phát hành: đẩy tag `vX.Y.Z` (khớp `version` trong `package.json`), workflow `release.yml` sẽ build và đăng lên GitHub Releases. Bản chưa ký số: bản cập nhật chỉ được tin dựa trên tài khoản GitHub của chủ repo, nên cân nhắc ký số trước khi khuyến khích người dùng bật tự cập nhật.
 
 ### Nhật ký lỗi
 
-`%APPDATA%DuoChatlogsduochat.log` (xoay vòng ở 1 MB) chỉ ghi sự kiện kỹ thuật như khởi động, lỗi tải trang, khóa/mở khóa. Không bao giờ ghi nội dung tin nhắn, cookie hay PIN; không gửi đi đâu.
+`%APPDATA%\DuoChat\logs\duochat.log` (xoay vòng ở 1 MB) chỉ ghi sự kiện kỹ thuật như khởi động, lỗi tải trang, khóa/mở khóa. Không bao giờ ghi nội dung tin nhắn, cookie hay PIN; không gửi đi đâu.
 
 ## Giới hạn đã biết
 
