@@ -20,6 +20,7 @@ export const IPC = {
   setDragging: 'ui:dragging',
   updatePrefs: 'settings:update',
   getMemory: 'state:memory',
+  getDisk: 'state:disk',
   lockNow: 'lock:now',
   unlock: 'lock:unlock',
   setPin: 'lock:set',
@@ -93,6 +94,8 @@ export interface InvokeMap {
   [IPC.updatePrefs]: { in: Partial<Prefs>; out: void }
   /** RAM (MB, working set) của tiến trình render từng account. */
   [IPC.getMemory]: { in: void; out: Record<string, number> }
+  /** Dung lượng ổ đĩa (byte) của thư mục dữ liệu từng account (cookie, bộ nhớ trang, cache). */
+  [IPC.getDisk]: { in: void; out: Record<string, number> }
   [IPC.lockNow]: { in: void; out: void }
   [IPC.unlock]: { in: string; out: PinResult }
   [IPC.setPin]: { in: { pin: string; current?: string }; out: PinResult }
@@ -120,6 +123,7 @@ export interface ShellApi {
   setDragging(dragging: boolean): Promise<void>
   updatePrefs(prefs: Partial<Prefs>): Promise<void>
   getMemory(): Promise<Record<string, number>>
+  getDisk(): Promise<Record<string, number>>
   lockNow(): Promise<void>
   unlock(pin: string): Promise<PinResult>
   setPin(pin: string, current?: string): Promise<PinResult>

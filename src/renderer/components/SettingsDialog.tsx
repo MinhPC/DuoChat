@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AppState, PinResult, Prefs } from '../../shared/ipc'
+import { formatBytes } from '../../shared/format'
 import { vi } from '../../shared/i18n/vi'
 import { AUTO_LOCK_OPTIONS, MAX_ZOOM, MIN_ZOOM, type Account } from '../../shared/types'
 
@@ -21,12 +22,21 @@ export function SettingsDialog({ prefs, lock, accounts, onClose }: Props): React
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [memory, setMemory] = useState<Record<string, number>>({})
+  const [disk, setDisk] = useState<Record<string, number> | null>(null)
 
   // RAM mỗi tài khoản, làm mới 3 giây một lần khi hộp thoại đang mở.
   useEffect(() => {
     const load = (): void => void window.duochat.getMemory().then((m) => m && setMemory(m))
     load()
     const id = setInterval(load, 3000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Dung lượng ổ đĩa: quét thư mục tốn I/O nên chỉ làm mới 30 giây một lần.
+  useEffect(() => {
+    const load = (): void => void window.duochat.getDisk().then((d) => d && setDisk(d))
+    load()
+    const id = setInterval(load, 30000)
     return () => clearInterval(id)
   }, [])
 
@@ -132,6 +142,17 @@ export function SettingsDialog({ prefs, lock, accounts, onClose }: Props): React
             </div>
           ))}
           <p className="note">{t.memoryNote}</p>
+        </div>
+
+        <div className="section">
+          <h3>{t.disk}</h3>
+          {accounts.map((a) => (
+            <div key={a.id} className="row mem">
+              <span>{a.name}</span>
+              <span>{disk ? formatBytes(disk[a.id] ?? 0) : '…'}</span>
+            </div>
+          ))}
+          <p className="note">{t.diskNote}</p>
         </div>
 
         <div className="section">

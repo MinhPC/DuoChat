@@ -1,8 +1,10 @@
-import { dialog, ipcMain, Menu, type BrowserWindow } from 'electron'
+import { app, dialog, ipcMain, Menu, type BrowserWindow } from 'electron'
 import { IPC, type InvokeMap } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
 import { ACCOUNT_PALETTE, ACCOUNT_SOUNDS, AUTO_LOCK_OPTIONS, PREVIEW_MODES } from '../shared/types'
 import type { AccountManager } from './accounts'
+import { partitionDir } from './cleanup'
+import { dirSize } from './diskUsage'
 import type { SettingsStore } from './store'
 
 type Handlers = {
@@ -147,6 +149,17 @@ export function registerIpc(
     [IPC.setOverlay]: (open) => manager.setOverlay(open === true),
     [IPC.setDragging]: (d) => manager.setDragging(d === true),
     [IPC.getMemory]: () => manager.memoryUsage(),
+    [IPC.getDisk]: async () => {
+      const userData = app.getPath('userData')
+      const out: Record<string, number> = {}
+      await Promise.all(
+        store.get().accounts.map(async (a) => {
+          const dir = partitionDir(userData, a.id)
+          out[a.id] = dir ? await dirSize(dir) : 0
+        }),
+      )
+      return out
+    },
     [IPC.lockNow]: () => manager.lockNow(),
     [IPC.unlock]: (pin) => manager.unlock(pin),
     [IPC.setPin]: (input) => manager.setPin(input?.pin, input?.current),

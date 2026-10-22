@@ -40,6 +40,7 @@ const api: ShellApi = {
   setDragging: (dragging) => invoke(IPC.setDragging, dragging),
   updatePrefs: (prefs: Partial<Prefs>) => invoke(IPC.updatePrefs, prefs),
   getMemory: () => invoke(IPC.getMemory),
+  getDisk: () => invoke(IPC.getDisk),
   lockNow: () => invoke(IPC.lockNow),
   unlock: (pin) => invoke(IPC.unlock, pin),
   setPin: (pin, current) => invoke(IPC.setPin, { pin, current }),

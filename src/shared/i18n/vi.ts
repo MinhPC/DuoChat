@@ -64,6 +64,9 @@ export const vi = {
     notifyPreview: 'Hiện nội dung tin nhắn trong thông báo (mặc định ẩn)',
     autoUpdate: 'Tự kiểm tra bản cập nhật (kết nối GitHub, chỉ bản cài đặt)',
     memory: 'Bộ nhớ (RAM) mỗi tài khoản',
+    disk: 'Dung lượng ổ đĩa mỗi tài khoản',
+    diskNote:
+      'Gồm cookie, dữ liệu trang và bộ nhớ đệm của tài khoản. "Đăng xuất nhanh" sẽ xóa sạch phần này.',
     memoryNote:
       'Mỗi tài khoản là một tiến trình riêng. Số liệu gần đúng, chưa gồm tiến trình GPU/chung.',
     zoom: 'Thu phóng nội dung',
