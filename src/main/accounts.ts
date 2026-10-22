@@ -56,6 +56,7 @@ import {
 const ZOOM_STEP = 0.1
 const MAX_NAME = 40
 const LOGGED_IN_STABLE_MS = 8000
+const PROFILE_LAYOUT_WAIT_MS = 600
 const AVATAR_SIZE = 96
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024
 
@@ -507,6 +508,12 @@ export class AccountManager {
       for (const cb of this.noticeListeners) cb(key)
     }
     if (this.needsLogin.get(id)) return notify('profileNotLoggedIn')
+    // View đang ẩn thì chưa có bố cục (kích thước 0), không tìm được ảnh theo vị trí: đưa lên màn hình trước.
+    if (!visibleAccountIds(this.store.get().layout).includes(id)) {
+      this.select(id, { swapIfOther: true })
+      await new Promise((r) => setTimeout(r, PROFILE_LAYOUT_WAIT_MS))
+      if (wc.isDestroyed()) return
+    }
 
     let profile = parseProfile(null)
     try {

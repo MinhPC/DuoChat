@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultSettings, migrate } from '../src/main/store'
 import {
   cleanName,
+  nameFromTitle,
   isAvatarDataUrl,
   parseProfile,
   PROFILE_SCRIPT,
@@ -29,8 +30,34 @@ describe('parseProfile', () => {
   })
   it('rác vào thì ra rỗng', () => {
     for (const raw of [null, 5, 'x', [], { name: 3, avatarUrl: {} }]) {
-      expect(parseProfile(raw)).toEqual({ name: null, avatarUrl: null })
+      expect(parseProfile(raw)).toMatchObject({ name: null, avatarUrl: null })
     }
+  })
+})
+
+describe('nameFromTitle', () => {
+  it('lấy tên sau "Zalo - ", bỏ số chưa đọc phía trước', () => {
+    expect(nameFromTitle('Zalo - Minh Phan')).toBe('Minh Phan')
+    expect(nameFromTitle('(3) Zalo - Kho Đá Phú Sơn')).toBe('Kho Đá Phú Sơn')
+    expect(nameFromTitle('[12] zalo -  A  B ')).toBe('A B')
+  })
+  it('không coi tiêu đề trang đăng nhập hay tiêu đề trơn là tên', () => {
+    for (const t of [
+      'Zalo',
+      '(3) Zalo',
+      'Zalo - Đăng nhập Zalo',
+      'Đăng nhập tài khoản Zalo',
+      '',
+      null,
+      5,
+    ]) {
+      expect(nameFromTitle(t)).toBeNull()
+    }
+  })
+  it('parseProfile dùng tiêu đề khi trang không có tên ở alt/title', () => {
+    expect(parseProfile({ name: null, title: 'Zalo - Minh Phan', avatarUrl: null }).name).toBe(
+      'Minh Phan',
+    )
   })
 })
 
@@ -62,7 +89,7 @@ describe('PROFILE_SCRIPT', () => {
     vm.runInNewContext(PROFILE_SCRIPT, { document, getComputedStyle: () => ({}) })
 
   it('là cú pháp hợp lệ và trả null khi trang không có ảnh phù hợp', () => {
-    expect(run({ querySelectorAll: () => [] })).toEqual({ name: null, avatarUrl: null })
+    expect(run({ querySelectorAll: () => [] })).toMatchObject({ name: null, avatarUrl: null })
   })
   it('không ném lỗi khi DOM hỏng', () => {
     expect(
@@ -71,7 +98,7 @@ describe('PROFILE_SCRIPT', () => {
           throw new Error('x')
         },
       }),
-    ).toEqual({ name: null, avatarUrl: null })
+    ).toMatchObject({ name: null, avatarUrl: null })
   })
   it('lấy ảnh nằm ở góc trên trái, host Zalo, kèm alt làm tên', () => {
     const img = (src: string, left: number, top: number, alt = ''): unknown => ({
@@ -91,7 +118,7 @@ describe('PROFILE_SCRIPT', () => {
             ]
           : [],
     })
-    expect(r).toEqual({ name: 'Minh Phan', avatarUrl: 'https://s1.zadn.vn/me.png' })
+    expect(r).toMatchObject({ name: 'Minh Phan', avatarUrl: 'https://s1.zadn.vn/me.png' })
   })
 })
 

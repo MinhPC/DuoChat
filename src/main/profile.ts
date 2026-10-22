@@ -5,11 +5,6 @@ import { isAllowedUrl } from './service'
  * Chỉ chạy khi người dùng bấm nút. Không đọc danh sách chat, danh bạ hay nội dung tin nhắn.
  */
 
-export interface ProfileRaw {
-  name: string | null
-  avatarUrl: string | null
-}
-
 export interface Profile {
   name: string | null
   avatarUrl: string | null
@@ -45,7 +40,7 @@ export const PROFILE_SCRIPT = String.raw`(() => {
     }
     cands.sort((a, b) => a.top - b.top)
     const best = cands[0]
-    if (!best) return { name: null, avatarUrl: null }
+    if (!best) return { name: null, title: document.title, avatarUrl: null }
     let name = null
     for (let el = best.el, i = 0; el && i < 3 && !name; el = el.parentElement, i++) {
       for (const attr of ['alt', 'aria-label', 'title']) {
@@ -53,9 +48,9 @@ export const PROFILE_SCRIPT = String.raw`(() => {
         if (v && v.trim()) { name = v.trim(); break }
       }
     }
-    return { name, avatarUrl: best.src }
+    return { name, title: document.title, avatarUrl: best.src }
   } catch (e) {
-    return { name: null, avatarUrl: null }
+    return { name: null, title: '', avatarUrl: null }
   }
 })()`
 
@@ -64,7 +59,7 @@ export function parseProfile(raw: unknown): Profile {
   const empty: Profile = { name: null, avatarUrl: null }
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return empty
   const r = raw as Record<string, unknown>
-  const name = cleanName(r.name)
+  const name = cleanName(r.name) ?? nameFromTitle(r.title)
   const avatarUrl =
     typeof r.avatarUrl === 'string' && r.avatarUrl.length <= MAX_URL && isAllowedUrl(r.avatarUrl)
       ? r.avatarUrl
@@ -74,6 +69,17 @@ export function parseProfile(raw: unknown): Profile {
 
 // Chuỗi chung chung của giao diện (alt/title của icon), không phải tên người dùng.
 const GENERIC = /^(avatar|profile|user|ảnh đại diện|tài khoản|account|zalo)$/i
+
+/**
+ * Zalo Web đặt tên chủ tài khoản vào tiêu đề tab: "Zalo - <tên>", có thể kèm số chưa đọc phía trước.
+ * Tiêu đề của trang đăng nhập không phải tên người dùng.
+ */
+export function nameFromTitle(title: unknown): string | null {
+  if (typeof title !== 'string') return null
+  const m = /^\s*(?:[([]\d+\+?[)\]]\s*)?Zalo\s*-\s*(.+)$/i.exec(title)
+  if (!m || /đăng nhập/i.test(m[1])) return null
+  return cleanName(m[1])
+}
 
 export function cleanName(v: unknown): string | null {
   if (typeof v !== 'string') return null
