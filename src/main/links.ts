@@ -1,4 +1,5 @@
 import { shell, type WebContents } from 'electron'
+import { attachContextMenu } from './contextMenu'
 import { isAllowedUrl, isExternalOpenable } from './service'
 
 /**
@@ -40,9 +41,17 @@ export function attachLinkHandling(
     if (isExternalOpenable(url)) void shell.openExternal(url)
   })
 
+  // will-navigate không nổ với redirect phía máy chủ, nên chặn riêng ở đây.
+  wc.on('will-redirect', (event, url) => {
+    if (isAllowedUrl(url)) return
+    event.preventDefault()
+    if (isExternalOpenable(url)) void shell.openExternal(url)
+  })
+
   wc.on('did-create-window', (child) => {
     child.removeMenu()
     child.webContents.setUserAgent(userAgent)
+    attachContextMenu(child.webContents)
     attachLinkHandling(child.webContents, partition, isDev, userAgent)
   })
 }
