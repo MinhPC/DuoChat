@@ -2,7 +2,7 @@
 
 > Tên dự án tạm: **DuoChat**. Không dùng chữ "Zalo" trong tên app và icon để tránh vấn đề thương hiệu.
 > Tài liệu này là đặc tả cho Claude Code. Đọc hết trước khi code. Làm đúng thứ tự ở mục 7 và **dừng lại ở các điểm kiểm tra (⛔)** để báo cáo.
-> Phiên bản spec: **v2** (2026-10-22). Đã thêm: split view vào MVP, chặn và định tuyến thông báo, chống throttle view nền, phím tắt, menu chuột phải, rủi ro mất phiên.
+> Phiên bản spec: **v3** (2026-10-22). v2 đã thêm: split view vào MVP, chặn và định tuyến thông báo, chống throttle view nền, phím tắt, menu chuột phải, rủi ro mất phiên. v3: app mobile chỉ làm cho **iOS** (bỏ Android), thêm so sánh phương án giống Zalo gốc (mục 3.2); R1 đã kiểm chứng không xảy ra.
 
 ---
 
@@ -11,7 +11,7 @@
 Zalo PC chỉ cho đăng nhập 1 tài khoản trên một máy. DuoChat là app vỏ bọc hiển thị **Zalo Web chính thức (https://chat.zalo.me)** trong nhiều WebView. Mỗi WebView có **vùng lưu trữ riêng** (cookie, localStorage, IndexedDB, cache), nên mỗi WebView giữ một phiên đăng nhập riêng.
 
 - **Giai đoạn 1:** App Windows. Ưu tiên số một, phải dùng được hằng ngày.
-- **Giai đoạn 2:** App mobile, Android trước rồi đến iOS. Rủi ro kỹ thuật cao nên phải spike trước.
+- **Giai đoạn 2:** App **iOS** (iPadOS ưu tiên); Android đã bỏ. Rủi ro kỹ thuật cao và Zalo gốc trên iPhone đã có "Chuyển tài khoản", nên phải spike và so sánh phương án trước (mục 3).
 
 ### Nguyên tắc bắt buộc
 1. **Chỉ dùng Zalo Web chính thức.** KHÔNG reverse-engineer API. KHÔNG dùng thư viện API Zalo không chính thức (zca-js…). KHÔNG tự động gửi tin, KHÔNG scrape nội dung chat. App chỉ là một trình duyệt chuyên dụng.
@@ -236,46 +236,73 @@ Prototype tối thiểu: 2 `WebContentsView` cố định đặt cạnh nhau, 2 
 
 ---
 
-## 3. Giai đoạn 2 — App mobile
+## 3. Giai đoạn 2 — App iOS (v3: chỉ iOS, bỏ Android)
 
-### 3.1 Bối cảnh & rủi ro (ĐỌC KỸ)
-1. **Tách storage cho WebView:**
-   - **Android:** WebView mặc định dùng chung storage cho cả process. `setDataDirectorySuffix` chỉ đặt được một lần mỗi process. Có hai hướng:
-     - (a) **AndroidX WebKit Profile API** (`androidx.webkit`: `ProfileStore`, `WebViewCompat.setProfile`). Nhiều profile trong một process, cần WebView đủ mới. Kiểm tra bằng `WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)`.
-     - (b) Mỗi account một process (`android:process=":accN"` cho Activity riêng) + `setDataDirectorySuffix`. Số account bị giới hạn bởi số Activity khai báo sẵn (vd 5).
-   - **iOS:** `WKWebsiteDataStore(forIdentifier:)` cho data store persistent riêng, **chỉ có từ iOS 17+**.
-2. **Zalo Web trên WebView mobile** có thể chuyển hướng sang trang tải app. Nhiều khả năng phải dùng UA desktop, và giao diện desktop trên màn hình nhỏ có thể khó dùng. Phù hợp hơn với tablet hoặc chế độ ngang.
-3. **Đăng nhập QR trên chính máy đó:** không thể dùng camera điện thoại quét màn hình của chính nó. Cần kiểm tra: app Zalo có quét QR từ ảnh trong thư viện được không; Zalo Web còn cho đăng nhập bằng số điện thoại/mật khẩu không; hoặc phải dùng một điện thoại khác.
-4. **Không có push thật:** WebView không chạy khi app bị kill. Android có thể giữ bằng foreground service (tốn pin). iOS gần như không làm được. Phải nói rõ hạn chế này với người dùng.
-5. Nhiều máy Android đã có sẵn **Dual Apps / Dual Messenger** (Samsung, Xiaomi, Oppo…). README phải gợi ý dùng tính năng đó trước.
+> **Quyết định (2026-10-22):** app mobile chỉ làm cho **iOS** (iPadOS ưu tiên). Android dừng; kết quả spike Android đã chạy
+> được giữ ở phụ lục [docs/spike-mobile.md](docs/spike-mobile.md) để tham khảo, không phát triển tiếp.
+> Chi tiết so sánh phương án và checklist spike nằm ở [docs/spike-mobile.md](docs/spike-mobile.md).
 
-**Giai đoạn 2 chỉ tiếp tục nếu spike 3.3 cho kết quả "dùng được".** Nếu không, dừng và ghi lý do vào `docs/spike-mobile.md`.
+### 3.1 Bối cảnh & sự thật đã biết (ĐỌC KỸ)
+1. **Zalo gốc trên iPhone đã hỗ trợ nhiều tài khoản:** Cá nhân → Cài đặt → "Chuyển tài khoản" → "Thêm tài khoản" (theo các bài
+   hướng dẫn, chưa kiểm chứng trên máy thật). Vì vậy trên iPhone, phương án giống Zalo gốc nhất là **dùng chính tính năng
+   này**, không cần app nào. DuoChat iOS chỉ có lý do tồn tại ở chỗ Zalo gốc không làm được: hai tài khoản **cạnh nhau trên
+   màn hình lớn (iPad)**, ghi chú rõ ràng, thông báo/badge gom theo cách DuoChat.
+2. **Tách storage cho WebView:** `WKWebsiteDataStore(forIdentifier:)` cho data store persistent riêng, **chỉ từ iOS 17**
+   ([WebKit blog](https://webkit.org/blog/14423/building-profiles-with-new-webkit-api/)). Phải lưu lại identifier (UUID) để
+   khôi phục sau khi mở lại app; xóa bằng `WKWebsiteDataStore.remove(forIdentifier:)`. **iOS tối thiểu: 17.**
+3. **Zalo Web trên WebView di động** chuyển hướng sang trang tải app (đã đo trên Android WebView: UA di động bị đưa tới
+   `market://details?id=com.zing.zalo`; iOS chưa đo nhưng giả định tương tự, có thể là `itms-apps://`). Phải dùng **UA
+   desktop**; giao diện desktop trên điện thoại dọc bị tràn, hợp hơn với iPad hoặc chế độ ngang.
+4. **Đăng nhập trên chính máy đó:** không thể dùng camera quét QR của chính màn hình. Trang đăng nhập có lựa chọn "Với số
+   điện thoại" (có thể kèm bước xác minh danh bạ hoặc "Gửi yêu cầu đăng nhập" tới điện thoại, theo các bài hướng dẫn, chưa
+   kiểm chứng). Cần kiểm tra khi spike.
+5. **Không có push thật:** WKWebView bị hệ điều hành đóng băng khi app xuống nền, websocket đứt, không nhận tin. Web Push của
+   iOS (16.4+) chỉ dành cho *web app thêm vào Màn hình chính* và chỉ hoạt động nếu chính trang web đăng ký push; Zalo Web có làm
+   vậy hay không **chưa biết**. Phải nói rõ hạn chế này với người dùng; **không làm relay qua máy chủ** (vi phạm local-first).
 
-### 3.2 Stack mobile
-- **Flutter** cho giao diện vỏ (danh sách account, settings).
-- WebView: trước hết kiểm tra `flutter_inappwebview` bản mới nhất xem đã hỗ trợ multi-profile (Android) và `WKWebsiteDataStore(forIdentifier:)` (iOS) chưa. Nếu chưa thì viết **platform view native** (Kotlin/Swift) qua platform channel.
-- Cấu hình dùng chung schema `Account` với Windows. `layout` trên mobile chỉ có `single` (tablet ngang có thể bật `split` ở bản sau).
-- Port logic `unread` sang Dart và tái sử dụng bộ test case (đưa test case vào file JSON dùng chung `tests/fixtures/titles.json`).
+### 3.2 Các phương án (xếp theo mức giống Zalo gốc)
 
-### 3.3 Spike mobile (Android, Kotlin native, chưa cần Flutter) ⛔
-- [ ] Máy test có hỗ trợ `MULTI_PROFILE` không (ghi phiên bản Android System WebView).
-- [ ] 2 profile đăng nhập 2 tài khoản khác nhau, không đá nhau, còn phiên sau khi khởi động lại app.
-- [ ] UA nào cho giao diện Zalo Web dùng được.
-- [ ] Cách đăng nhập nào khả thi khi chạy trên chính máy đó (3.1.3).
-- [ ] Để app ở nền 30 phút có foreground service: còn nhận tin không, hao bao nhiêu % pin.
-- [ ] Nếu (a) không hỗ trợ: thử hướng (b) multi-process.
+| | Phương án | Giống Zalo gốc | Thông báo khi app ở nền | Công sức | Rủi ro chính |
+|---|---|---|---|---|---|
+| P1 | Dùng **"Chuyển tài khoản" của Zalo gốc** (không làm app) | Giống nhất (chính là Zalo gốc) | Có (do Zalo gốc xử lý; việc nhận thông báo của tài khoản không đang dùng chưa kiểm chứng) | 0 | Không xem hai tài khoản cùng lúc |
+| P2 | **Web app Màn hình chính**: Safari mở chat.zalo.me → "Thêm vào Màn hình chính", mỗi tài khoản một web app | Trung bình (giao diện Zalo Web) | Chỉ nếu Zalo Web đăng ký Web Push (chưa biết) | ~0 (không code) | UA di động có thể bị chuyển sang App Store; phiên có tách riêng giữa các web app hay không (iOS 17+) cần thử |
+| P3 | **DuoChat iOS** (SwiftUI + WKWebView, UA desktop, `forIdentifier:`), iPad ưu tiên | Thấp–trung bình (Zalo Web, bố cục desktop) | **Không** (chỉ khi app đang mở) | Cao nhất | Không push; bố cục desktop; Apple có thể từ chối nếu chỉ là vỏ web (App Review 4.2) |
+| P4 | P3 + relay thông báo qua máy chủ | — | Có | — | **Loại**: cần máy chủ và đọc nội dung, vi phạm nguyên tắc ở mục 1 |
 
-**Dừng lại và báo cáo, chờ quyết định trước khi làm Flutter.**
+**Khuyến nghị:** (1) iPhone: dùng P1, không làm app. (2) Thử **P2 trước** vì không tốn công và có thể cho cả thông báo.
+(3) Chỉ làm **P3 hướng iPad** nếu P2 không đạt và bạn chấp nhận không có thông báo khi ở nền. Không làm P4.
 
-### 3.4 Tính năng mobile (nếu spike đạt)
-- Danh sách account dạng drawer hoặc tab dưới. Tối đa 3 WebView sống đồng thời. View cũ nhất sẽ được giải phóng và reload khi mở lại.
-- Badge từ title, thông báo local khi số chưa đọc tăng (chỉ khi app còn sống).
-- Upload file (`onShowFileChooser` / `WKUIDelegate`), tải file về máy, link ngoài mở bằng trình duyệt hệ thống.
-- Xóa account thì xóa profile hoặc data store tương ứng.
+### 3.3 Spike iOS ⛔ (cần máy Mac + Xcode + iPad/iPhone chạy iOS 17+; chưa thực hiện)
+Thứ tự: P2 trước, rồi P3. Ghi kết quả vào `docs/spike-mobile.md`.
+- [ ] **P2:** chat.zalo.me trong Safari có mở được giao diện (không bị đưa sang App Store) không; cần "Yêu cầu trang web cho máy tính"?
+- [ ] **P2:** thêm 2 web app, đăng nhập 2 tài khoản khác nhau, phiên có tách riêng không; có hiện hộp thoại xin quyền thông báo không.
+- [ ] **P3:** 2 `WKWebsiteDataStore(forIdentifier:)` đăng nhập 2 tài khoản không đá nhau; còn phiên sau khi kill app.
+- [ ] **P3:** UA nào cho giao diện dùng được (`customUserAgent` desktop, `WKWebpagePreferences.preferredContentMode = .desktop`).
+- [ ] Đăng nhập trên chính máy: "Với số điện thoại" có dùng được không; có quét QR từ ảnh trong thư viện không.
+- [ ] Nền: app ở nền bao lâu thì mất kết nối; mở lại có đồng bộ tin đủ không.
+- [ ] Thông báo local khi app đang mở (đọc số chưa đọc từ `document.title`, cầu nối `WKScriptMessageHandler`).
+- [ ] Gửi ảnh/file (chọn từ thư viện, `WKUIDelegate`), tải file.
+- [ ] Liệt kê khác biệt so với Zalo gốc trên cùng máy.
+
+**Giai đoạn 2 chỉ tiếp tục nếu spike cho kết quả "dùng được".** Nếu không, dừng và ghi lý do vào `docs/spike-mobile.md`.
+**Dừng lại và báo cáo, chờ quyết định trước khi viết app.**
+
+### 3.4 Stack (nếu làm P3)
+- **SwiftUI + WKWebView native**, không dùng Flutter: chỉ nhắm iOS thì Flutter chỉ thêm một lớp cầu nối mà không giúp gì,
+  trong khi cần trực tiếp `WKWebsiteDataStore(forIdentifier:)`, `WKScriptMessageHandler`, `WKUIDelegate`.
+- Cấu hình dùng chung schema `Account` (JSON) với Windows; `layout` chỉ có `single` (iPad ngang có thể có `split`).
+- Port logic `unread` sang Swift và dùng chung bộ test case `tests/fixtures/titles.json`.
+
+### 3.5 Tính năng iOS (nếu spike đạt)
+- iPad: thanh bên danh sách account, tùy chọn 2 pane. iPhone: tab bar. Tối đa 3 WebView sống; view cũ nhất được giải phóng và
+  reload khi mở lại.
+- Badge từ title; thông báo local khi số chưa đọc tăng (chỉ khi app còn chạy).
+- Upload/tải file, link ngoài mở bằng Safari, xóa account thì `remove(forIdentifier:)`.
+- Nói rõ trong app và README: không có thông báo khi app ở nền; khuyên dùng Zalo gốc cho nhu cầu đó.
 
 ---
 
-## 4. Can thiệp tối thiểu vào trang (cả hai nền tảng)
+## 4. Can thiệp tối thiểu vào trang (Windows và iOS)
 
 Chỉ được phép làm hai việc sau:
 1. **Đọc `document.title`** từ phía app (qua sự kiện `page-title-updated`, không inject gì).
@@ -283,7 +310,7 @@ Chỉ được phép làm hai việc sau:
    - Main gọi `webContents.executeJavaScript(shim)` ở sự kiện `dom-ready` (chạy trong main world, không bị CSP chặn như thẻ `<script>`).
    - Shim thay `window.Notification` bằng một class tương thích: `permission` luôn là `'granted'`, `requestPermission()` resolve `'granted'`, constructor gọi `window.__duochat.notify({ title, body, icon, tag })` và **không** tạo thông báo gốc. Trả về object có `close()`, `onclick` để không làm trang lỗi.
    - Shim phải idempotent (chạy lại khi reload không bị lỗi) và được bọc trong `try/catch`.
-   - Trên mobile, cầu nối là JS bridge của WebView (`addJavascriptInterface` / `WKScriptMessageHandler`), cùng API `notify`.
+   - Trên iOS, cầu nối là `WKScriptMessageHandler`, cùng API `notify`.
 
 Không đọc DOM tin nhắn, không gửi tin, không sửa CSS hay giao diện Zalo.
 
@@ -315,4 +342,4 @@ npm run build:win   # electron-builder → dist/ (nsis + portable, x64)
 5. Badge (10), shim + thông báo (11), tray (12), khởi động cùng Windows (13), single instance (14).
 6. Link ngoài (15), download (16), menu chuột phải (17), spellcheck (18), kiểm tra kéo thả/dán (19), permission handler.
 7. Đóng gói, test trên máy sạch, viết README. Đối chiếu tiêu chí 2.10.
-8. Giai đoạn 2: **spike Android 3.3**, ghi `docs/spike-mobile.md`. ⛔ **Dừng, báo cáo.**
+8. Giai đoạn 2: **spike iOS 3.3** (thử P2 trước rồi P3), ghi `docs/spike-mobile.md`. ⛔ **Dừng, báo cáo.** (Spike Android đã chạy xong, kết quả ở phụ lục `docs/spike-mobile.md`, không phát triển tiếp.)

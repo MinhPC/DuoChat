@@ -87,6 +87,10 @@ portable. Để phát hành: đặt `GH_TOKEN` rồi chạy `npx electron-builde
 - Số chưa đọc đọc từ tiêu đề trang; nếu Zalo không đưa số vào tiêu đề thì DuoChat đếm số thông báo kể từ lần cuối
   bạn xem tài khoản đó.
 
+## Mobile
+
+Chỉ có kế hoạch cho **iOS** (Android đã bỏ). Trên iPhone, Zalo gốc đã có "Chuyển tài khoản", nên phương án giống Zalo gốc nhất là dùng chính tính năng đó; DuoChat iOS (nếu làm) hướng tới iPad và **không có thông báo khi app ở nền**. Phân tích phương án và checklist thử nghiệm: [docs/spike-mobile.md](docs/spike-mobile.md).
+
 ## Phát triển
 
 ```
