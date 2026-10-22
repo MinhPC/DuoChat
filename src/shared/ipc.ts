@@ -21,6 +21,7 @@ export const IPC = {
   updatePrefs: 'settings:update',
   getMemory: 'state:memory',
   getDisk: 'state:disk',
+  checkUpdate: 'update:check',
   lockNow: 'lock:now',
   unlock: 'lock:unlock',
   setPin: 'lock:set',
@@ -51,6 +52,16 @@ export type NoticeKey =
   | 'profileNotFound'
   | 'profileDone'
   | 'profilePartial'
+
+/**
+ * Kết quả bấm "Kiểm tra ngay". `unsupported`: bản dev hoặc portable. `notFound`: máy chủ trả 404 (repo private
+ * hoặc chưa có bản phát hành nào). `error`: lỗi khác (mạng…).
+ */
+export interface UpdateCheckResult {
+  status: 'latest' | 'available' | 'unsupported' | 'notFound' | 'error'
+  /** Phiên bản mới (khi `available`) hoặc phiên bản đang chạy (khi `latest`). */
+  version?: string
+}
 
 /** Kết quả thao tác dùng PIN. `retryAfterMs` > 0: phải chờ trước khi thử tiếp. */
 export interface PinResult {
@@ -98,6 +109,8 @@ export interface InvokeMap {
   [IPC.getMemory]: { in: void; out: Record<string, number> }
   /** Dung lượng ổ đĩa (byte) của thư mục dữ liệu từng account (cookie, bộ nhớ trang, cache). */
   [IPC.getDisk]: { in: void; out: Record<string, number> }
+  /** Kiểm tra bản mới ngay, kể cả khi tự kiểm tra đang tắt (chỉ chạy khi người dùng bấm). */
+  [IPC.checkUpdate]: { in: void; out: UpdateCheckResult }
   [IPC.lockNow]: { in: void; out: void }
   [IPC.unlock]: { in: string; out: PinResult }
   [IPC.setPin]: { in: { pin: string; current?: string }; out: PinResult }
@@ -126,6 +139,7 @@ export interface ShellApi {
   updatePrefs(prefs: Partial<Prefs>): Promise<void>
   getMemory(): Promise<Record<string, number>>
   getDisk(): Promise<Record<string, number>>
+  checkUpdate(): Promise<UpdateCheckResult>
   lockNow(): Promise<void>
   unlock(pin: string): Promise<PinResult>
   setPin(pin: string, current?: string): Promise<PinResult>

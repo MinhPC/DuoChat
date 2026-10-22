@@ -1,5 +1,5 @@
 import { app, dialog, ipcMain, Menu, type BrowserWindow } from 'electron'
-import { IPC, type InvokeMap } from '../shared/ipc'
+import { IPC, type InvokeMap, type UpdateCheckResult } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
 import { ACCOUNT_PALETTE, ACCOUNT_SOUNDS, AUTO_LOCK_OPTIONS, PREVIEW_MODES } from '../shared/types'
 import type { AccountManager } from './accounts'
@@ -24,6 +24,7 @@ export function registerIpc(
   store: SettingsStore,
   applyLoginItem: () => void,
   onPrefsChanged: () => void,
+  checkUpdate: () => Promise<UpdateCheckResult>,
 ): void {
   const shellWc = win.webContents
 
@@ -160,6 +161,7 @@ export function registerIpc(
       )
       return out
     },
+    [IPC.checkUpdate]: () => checkUpdate(),
     [IPC.lockNow]: () => manager.lockNow(),
     [IPC.unlock]: (pin) => manager.unlock(pin),
     [IPC.setPin]: (input) => manager.setPin(input?.pin, input?.current),

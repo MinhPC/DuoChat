@@ -1,4 +1,5 @@
 import { autoUpdater } from 'electron-updater'
+import type { UpdateCheckResult } from '../shared/ipc'
 import type { Logger } from './logger'
 import { canAutoUpdate } from './updatePolicy'
 
@@ -20,19 +21,41 @@ export class Updater {
     private readonly env: { packaged: boolean; portable: boolean },
   ) {}
 
+  private wire(): void {
+    if (this.wired) return
+    this.wired = true
+    autoUpdater.autoDownload = true
+    autoUpdater.autoInstallOnAppQuit = true
+    autoUpdater.on('update-downloaded', (info) => {
+      this.log.info('update_downloaded', { version: info.version })
+      this.onDownloaded(info.version)
+    })
+    autoUpdater.on('error', (e) => this.log.info('update_error', { message: String(e.message) }))
+  }
+
+  /**
+   * Người dùng bấm "Kiểm tra ngay": chạy một lần, độc lập với cài đặt tự kiểm tra. Bản dev và bản portable
+   * không cập nhật được nên trả `unsupported` mà không kết nối ra ngoài.
+   */
+  async checkNow(): Promise<UpdateCheckResult> {
+    if (!canAutoUpdate({ enabled: true, ...this.env })) return { status: 'unsupported' }
+    this.wire()
+    try {
+      const r = await autoUpdater.checkForUpdates()
+      const info = r?.updateInfo
+      if (r?.isUpdateAvailable && info) return { status: 'available', version: info.version }
+      return { status: 'latest', version: info?.version ?? autoUpdater.currentVersion.version }
+    } catch (e) {
+      const message = String((e as Error).message)
+      this.log.info('update_check_failed', { message: message.slice(0, 200) })
+      return { status: message.includes('404') ? 'notFound' : 'error' }
+    }
+  }
+
   setEnabled(enabled: boolean): void {
     this.stop()
     if (!canAutoUpdate({ enabled, ...this.env })) return
-    if (!this.wired) {
-      this.wired = true
-      autoUpdater.autoDownload = true
-      autoUpdater.autoInstallOnAppQuit = true
-      autoUpdater.on('update-downloaded', (info) => {
-        this.log.info('update_downloaded', { version: info.version })
-        this.onDownloaded(info.version)
-      })
-      autoUpdater.on('error', (e) => this.log.info('update_error', { message: String(e.message) }))
-    }
+    this.wire()
     const check = (): void => {
       autoUpdater
         .checkForUpdates()

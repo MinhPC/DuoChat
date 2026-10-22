@@ -123,7 +123,7 @@ function start(): void {
     portable: Boolean(process.env.PORTABLE_EXECUTABLE_FILE),
   })
   const applyUpdater = (): void => updater.setEnabled(store.get().autoUpdate)
-  registerIpc(win, manager, store, applyLoginItem, applyUpdater)
+  registerIpc(win, manager, store, applyLoginItem, applyUpdater, () => updater.checkNow())
   applyUpdater()
   // Đang khóa thì không bao giờ lộ nội dung tin trong toast.
   setupNotifications(

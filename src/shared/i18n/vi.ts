@@ -64,6 +64,16 @@ export const vi = {
     minimizeToTray: 'Bấm X chỉ ẩn xuống khay hệ thống',
     notifyPreview: 'Hiện nội dung tin nhắn trong thông báo (mặc định ẩn)',
     autoUpdate: 'Tự kiểm tra bản cập nhật (kết nối GitHub, chỉ bản cài đặt)',
+    checkUpdate: 'Kiểm tra bản cập nhật ngay',
+    checking: 'Đang kiểm tra…',
+    updateResult: {
+      latest: (v: string) => `Bạn đang dùng bản mới nhất${v ? ` (${v})` : ''}.`,
+      available: (v: string) => `Có bản mới ${v}. Đang tải về, sẽ được cài khi bạn thoát DuoChat.`,
+      unsupported: 'Chỉ bản cài đặt (không phải portable hay bản dev) mới tự cập nhật được.',
+      notFound:
+        'Không tìm thấy bản phát hành (lỗi 404). Kho GitHub có thể đang ở chế độ riêng tư hoặc chưa có bản nào.',
+      error: 'Không kiểm tra được. Hãy kiểm tra kết nối mạng rồi thử lại.',
+    },
     memory: 'Bộ nhớ (RAM) mỗi tài khoản',
     disk: 'Dung lượng ổ đĩa mỗi tài khoản',
     diskNote:

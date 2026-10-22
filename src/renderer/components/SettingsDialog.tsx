@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppState, PinResult, Prefs } from '../../shared/ipc'
+import type { AppState, PinResult, Prefs, UpdateCheckResult } from '../../shared/ipc'
 import { formatBytes } from '../../shared/format'
 import { vi } from '../../shared/i18n/vi'
 import { AUTO_LOCK_OPTIONS, MAX_ZOOM, MIN_ZOOM, type Account } from '../../shared/types'
@@ -23,6 +23,24 @@ export function SettingsDialog({ prefs, lock, accounts, onClose }: Props): React
   const [error, setError] = useState('')
   const [memory, setMemory] = useState<Record<string, number>>({})
   const [disk, setDisk] = useState<Record<string, number> | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [updateMsg, setUpdateMsg] = useState('')
+
+  const checkUpdate = async (): Promise<void> => {
+    setChecking(true)
+    setUpdateMsg('')
+    const r: UpdateCheckResult | undefined = await window.duochat
+      .checkUpdate()
+      .catch(() => undefined)
+    setChecking(false)
+    const u = t.updateResult
+    if (!r) return setUpdateMsg(u.error)
+    setUpdateMsg(
+      r.status === 'latest' || r.status === 'available'
+        ? u[r.status](r.version ?? '')
+        : u[r.status],
+    )
+  }
 
   // RAM mỗi tài khoản, làm mới 3 giây một lần khi hộp thoại đang mở.
   useEffect(() => {
@@ -119,6 +137,21 @@ export function SettingsDialog({ prefs, lock, accounts, onClose }: Props): React
         {check('minimizeToTray', t.minimizeToTray)}
         {check('notifyPreview', t.notifyPreview)}
         {check('autoUpdate', t.autoUpdate)}
+        <div className="row">
+          <button
+            type="button"
+            className="btn"
+            disabled={checking}
+            onClick={() => void checkUpdate()}
+          >
+            {checking ? t.checking : t.checkUpdate}
+          </button>
+        </div>
+        {updateMsg && (
+          <p className="note" role="status">
+            {updateMsg}
+          </p>
+        )}
         <label>
           {t.zoom}: {Math.round(prefs.zoomFactor * 100)}%
           <input
