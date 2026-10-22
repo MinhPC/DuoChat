@@ -1,0 +1,20 @@
+{
+  "_note": "GIẢ ĐỊNH ngoại trừ nhóm 'observed'. Thay bằng title thật sau khi đăng nhập (docs/spike-windows.md). File dùng chung với bản Dart ở giai đoạn 2.",
+  "observed": [
+    { "title": "Zalo - Đăng nhập Zalo", "unread": null },
+    { "title": "Zalo", "unread": null },
+    { "title": "Đăng nhập tài khoản Zalo", "unread": null }
+  ],
+  "assumed": [
+    { "title": "(3) Zalo", "unread": 3 },
+    { "title": "(12) Zalo", "unread": 12 },
+    { "title": "(99+) Zalo", "unread": 99 },
+    { "title": "[5] Zalo", "unread": 5 },
+    { "title": "Zalo (7)", "unread": 7 },
+    { "title": "2 tin nhắn mới", "unread": 2 },
+    { "title": "  (4) Zalo  ", "unread": 4 },
+    { "title": "(0) Zalo", "unread": 0 },
+    { "title": "Zalo 2024", "unread": null },
+    { "title": "", "unread": null }
+  ]
+}
