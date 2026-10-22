@@ -17,11 +17,7 @@ const single = (active: string): LayoutSettings => ({
   ...defaultSettings().layout,
   activeAccountId: active,
 })
-const split = (
-  left: string,
-  right: string,
-  pane: 'left' | 'right' = 'left',
-): LayoutSettings => ({
+const split = (left: string, right: string, pane: 'left' | 'right' = 'left'): LayoutSettings => ({
   ...defaultSettings().layout,
   mode: 'split',
   activeAccountId: pane === 'left' ? left : right,

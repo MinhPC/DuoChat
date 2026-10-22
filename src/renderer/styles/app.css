@@ -1,0 +1,333 @@
+:root {
+  --bg: #111827;
+  --panel: #1f2937;
+  --line: #374151;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --accent: #3b82f6;
+  --danger: #ef4444;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font:
+    14px/1.4 'Segoe UI',
+    system-ui,
+    sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.app {
+  position: relative;
+  height: 100%;
+}
+
+/* ---- sidebar ---- */
+.sidebar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  background: #0b1220;
+  border-right: 1px solid var(--line);
+}
+
+.sidebar-list,
+.sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.account {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.account.shown {
+  border-color: var(--line);
+}
+
+.account.focused {
+  border-color: var(--accent);
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 13px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+.muted-mark {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 12px;
+}
+
+.side-btn {
+  width: 44px;
+  height: 44px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.side-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.side-btn.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.side-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---- stage (nền sau các view Zalo) ---- */
+.stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.stage.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-left: 72px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.stage.empty h1 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 22px;
+}
+
+.stage.empty p {
+  max-width: 420px;
+  margin: 0;
+}
+
+.pane {
+  position: absolute;
+  border: 2px solid var(--line);
+}
+
+.pane.focused {
+  border-color: var(--accent);
+}
+
+.pane.dragging {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+}
+
+.pane-label {
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.divider {
+  position: absolute;
+  background: var(--line);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.divider:hover {
+  background: var(--accent);
+}
+
+/* ---- dialog ---- */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  user-select: text;
+}
+
+.dialog h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.dialog label,
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.dialog label.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.dialog input[type='text'],
+.dialog input:not([type]) {
+  padding: 9px 10px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.dialog input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.palette {
+  display: flex;
+  gap: 8px;
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.swatch.on {
+  border-color: #fff;
+}
+
+.warn {
+  margin: 0;
+  padding: 8px 10px;
+  background: rgba(234, 179, 8, 0.15);
+  border-radius: 8px;
+  color: #fde68a;
+  font-size: 13px;
+}
+
+.note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn {
+  padding: 8px 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  z-index: 20;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}

@@ -14,7 +14,12 @@ describe('computeLayout', () => {
   it('chế độ đơn: view chiếm toàn bộ phần còn lại', () => {
     const l = computeLayout({ ...base, mode: 'single' })
     expect(l.sidebar).toEqual({ x: 0, y: 0, width: SIDEBAR_WIDTH, height: 900 })
-    expect(l.views.single).toEqual({ x: SIDEBAR_WIDTH, y: 0, width: 1600 - SIDEBAR_WIDTH, height: 900 })
+    expect(l.views.single).toEqual({
+      x: SIDEBAR_WIDTH,
+      y: 0,
+      width: 1600 - SIDEBAR_WIDTH,
+      height: 900,
+    })
     expect(l.views.left).toBeNull()
     expect(l.divider).toBeNull()
   })

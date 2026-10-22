@@ -53,3 +53,9 @@ export function displayedUnread(state: UnreadTracking): number {
   if (state.titleEverHadCount) return state.titleCount ?? 0
   return state.notificationCount
 }
+
+/** Tên file ảnh badge cho tổng số chưa đọc: 1–9 có ảnh riêng, từ 10 trở lên là "9+". */
+export function badgeImageName(total: number): string | null {
+  if (total <= 0) return null
+  return total <= 9 ? `badge-${total}.png` : 'badge-9plus.png'
+}

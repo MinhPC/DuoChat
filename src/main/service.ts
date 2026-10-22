@@ -49,9 +49,7 @@ export function isExternalOpenable(url: string): boolean {
  */
 export function buildUserAgent(electronUa: string, appName: string): string {
   const escaped = appName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return electronUa
-    .replace(/\s+Electron\/\S+/, '')
-    .replace(new RegExp(`\\s+${escaped}/\\S+`), '')
+  return electronUa.replace(/\s+Electron\/\S+/, '').replace(new RegExp(`\\s+${escaped}/\\S+`), '')
 }
 
 export function partitionFor(accountId: string): string {

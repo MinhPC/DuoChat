@@ -35,15 +35,28 @@ afterEach(() => {
 
 describe('migrate', () => {
   it('rác / null / mảng → mặc định', () => {
-    for (const bad of [null, undefined, 42, 'x', []]) expect(migrate(bad)).toEqual(defaultSettings())
+    for (const bad of [null, undefined, 42, 'x', []])
+      expect(migrate(bad)).toEqual(defaultSettings())
   })
 
   it('v1 → v2: thêm layout, muted, zoom, startMinimized, pendingPartitionCleanup', () => {
     const v1 = {
       schemaVersion: 1,
       accounts: [
-        { id: A, name: 'Cá nhân', color: '#2563eb', order: 0, createdAt: '2026-01-01T00:00:00.000Z' },
-        { id: B, name: 'Công ty', color: '#16a34a', order: 1, createdAt: '2026-01-02T00:00:00.000Z' },
+        {
+          id: A,
+          name: 'Cá nhân',
+          color: '#2563eb',
+          order: 0,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          id: B,
+          name: 'Công ty',
+          color: '#16a34a',
+          order: 1,
+          createdAt: '2026-01-02T00:00:00.000Z',
+        },
       ],
       activeAccountId: B,
       startWithWindows: true,

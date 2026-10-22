@@ -4,6 +4,7 @@ directories:
   output: dist
 files:
   - out/**/*
+  - resources/**/*
   - package.json
 win:
   icon: resources/icon.png

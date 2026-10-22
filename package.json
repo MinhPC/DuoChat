@@ -10,7 +10,11 @@
     "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "build:win": "npm run build && electron-builder --win --x64"
+    "build:win": "npm run build && electron-builder --win --x64",
+    "icons": "node scripts/gen-icons.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "e2e:keys": "node scripts/e2e-keys.mjs",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"tests/**/*.ts\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -31,5 +35,6 @@
   "dependencies": {
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
-  }
+  },
+  "author": "Minh Phan"
 }

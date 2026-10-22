@@ -21,6 +21,18 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
     build: { rollupOptions: { input: { index: resolve(__dirname, 'src/renderer/index.html') } } },
-    plugins: [react()],
+    plugins: [
+      react(),
+      {
+        // CSP chỉ cho bản build (dev cần script inline của HMR).
+        name: 'duochat-csp',
+        transformIndexHtml(html, ctx) {
+          if (ctx.server) return html
+          const csp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+          const meta = `<meta http-equiv="Content-Security-Policy" content="${csp}" />`
+          return html.replace('<head>', `<head>\n    ${meta}`)
+        },
+      },
+    ],
   },
 })
