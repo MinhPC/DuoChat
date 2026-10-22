@@ -1,7 +1,7 @@
 import { dialog, ipcMain, Menu, type BrowserWindow } from 'electron'
 import { IPC, type InvokeMap } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
-import { ACCOUNT_PALETTE, ACCOUNT_SOUNDS, AUTO_LOCK_OPTIONS } from '../shared/types'
+import { ACCOUNT_PALETTE, ACCOUNT_SOUNDS, AUTO_LOCK_OPTIONS, PREVIEW_MODES } from '../shared/types'
 import type { AccountManager } from './accounts'
 import type { SettingsStore } from './store'
 
@@ -21,6 +21,7 @@ export function registerIpc(
   manager: AccountManager,
   store: SettingsStore,
   applyLoginItem: () => void,
+  onPrefsChanged: () => void,
 ): void {
   const shellWc = win.webContents
 
@@ -47,6 +48,15 @@ export function registerIpc(
           type: 'radio' as const,
           checked: account.sound === sound,
           click: () => manager.patchAccount(id, { sound }),
+        })),
+      },
+      {
+        label: t.preview,
+        submenu: PREVIEW_MODES.map((preview) => ({
+          label: vi.previewModes[preview],
+          type: 'radio' as const,
+          checked: account.preview === preview,
+          click: () => manager.patchAccount(id, { preview }),
         })),
       },
       {
@@ -132,6 +142,7 @@ export function registerIpc(
     [IPC.resetSplitRatio]: () => manager.resetSplitRatio(),
     [IPC.setOverlay]: (open) => manager.setOverlay(open === true),
     [IPC.setDragging]: (d) => manager.setDragging(d === true),
+    [IPC.getMemory]: () => manager.memoryUsage(),
     [IPC.lockNow]: () => manager.lockNow(),
     [IPC.unlock]: (pin) => manager.unlock(pin),
     [IPC.setPin]: (input) => manager.setPin(input?.pin, input?.current),
@@ -151,11 +162,13 @@ export function registerIpc(
           typeof prefs.minimizeToTray === 'boolean' ? prefs.minimizeToTray : s.minimizeToTray,
         notifyPreview:
           typeof prefs.notifyPreview === 'boolean' ? prefs.notifyPreview : s.notifyPreview,
+        autoUpdate: typeof prefs.autoUpdate === 'boolean' ? prefs.autoUpdate : s.autoUpdate,
       }))
       if (typeof prefs.zoomFactor === 'number' && Number.isFinite(prefs.zoomFactor)) {
         manager.setZoom(prefs.zoomFactor)
       }
       applyLoginItem()
+      onPrefsChanged()
       manager.relayout()
     },
   }

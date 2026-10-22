@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import type { AppState, PinResult, Prefs } from '../../shared/ipc'
 import { vi } from '../../shared/i18n/vi'
-import { AUTO_LOCK_OPTIONS, MAX_ZOOM, MIN_ZOOM } from '../../shared/types'
+import { AUTO_LOCK_OPTIONS, MAX_ZOOM, MIN_ZOOM, type Account } from '../../shared/types'
 
 interface Props {
   prefs: Prefs
   lock: AppState['lock']
+  accounts: Account[]
   onClose: () => void
 }
 
 type PinMode = 'idle' | 'set' | 'change' | 'remove'
 
-export function SettingsDialog({ prefs, lock, onClose }: Props): React.JSX.Element {
+export function SettingsDialog({ prefs, lock, accounts, onClose }: Props): React.JSX.Element {
   const t = vi.settings
   const l = vi.lock
   const [mode, setMode] = useState<PinMode>('idle')
@@ -19,6 +20,15 @@ export function SettingsDialog({ prefs, lock, onClose }: Props): React.JSX.Eleme
   const [pin, setPin] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
+  const [memory, setMemory] = useState<Record<string, number>>({})
+
+  // RAM mỗi tài khoản, làm mới 3 giây một lần khi hộp thoại đang mở.
+  useEffect(() => {
+    const load = (): void => void window.duochat.getMemory().then((m) => m && setMemory(m))
+    load()
+    const id = setInterval(load, 3000)
+    return () => clearInterval(id)
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -56,7 +66,7 @@ export function SettingsDialog({ prefs, lock, onClose }: Props): React.JSX.Eleme
   }
 
   const check = (
-    key: 'startWithWindows' | 'startMinimized' | 'minimizeToTray' | 'notifyPreview',
+    key: 'startWithWindows' | 'startMinimized' | 'minimizeToTray' | 'notifyPreview' | 'autoUpdate',
     label: string,
   ): React.JSX.Element => (
     <label className="check">
@@ -98,6 +108,7 @@ export function SettingsDialog({ prefs, lock, onClose }: Props): React.JSX.Eleme
         {check('startMinimized', t.startMinimized)}
         {check('minimizeToTray', t.minimizeToTray)}
         {check('notifyPreview', t.notifyPreview)}
+        {check('autoUpdate', t.autoUpdate)}
         <label>
           {t.zoom}: {Math.round(prefs.zoomFactor * 100)}%
           <input
@@ -111,6 +122,17 @@ export function SettingsDialog({ prefs, lock, onClose }: Props): React.JSX.Eleme
             }
           />
         </label>
+
+        <div className="section">
+          <h3>{t.memory}</h3>
+          {accounts.map((a) => (
+            <div key={a.id} className="row mem">
+              <span>{a.name}</span>
+              <span>{memory[a.id] ? `${memory[a.id]} MB` : '…'}</span>
+            </div>
+          ))}
+          <p className="note">{t.memoryNote}</p>
+        </div>
 
         <div className="section">
           <h3>{l.section}</h3>

@@ -230,6 +230,19 @@ export class AccountManager {
     return visibleAccountIds(this.store.get().layout).includes(id)
   }
 
+  /** RAM (MB) của tiến trình render từng account, theo working set. */
+  memoryUsage(): Record<string, number> {
+    const byPid = new Map(app.getAppMetrics().map((m) => [m.pid, m.memory.workingSetSize]))
+    const out: Record<string, number> = {}
+    for (const [id, view] of this.views) {
+      const kb = view.webContents.isDestroyed()
+        ? 0
+        : (byPid.get(view.webContents.getOSProcessId()) ?? 0)
+      out[id] = Math.round(kb / 1024)
+    }
+    return out
+  }
+
   totalUnread(): number {
     let n = 0
     for (const t of this.unread.values()) n += displayedUnread(t)
@@ -258,6 +271,7 @@ export class AccountManager {
       minimizeToTray: s.minimizeToTray,
       zoomFactor: s.zoomFactor,
       notifyPreview: s.notifyPreview,
+      autoUpdate: s.autoUpdate,
     }
     const needsLogin: Record<string, boolean> = {}
     for (const a of s.accounts) needsLogin[a.id] = this.needsLogin.get(a.id) ?? false
@@ -441,6 +455,7 @@ export class AccountManager {
       order: s.accounts.length,
       muted: false,
       sound: 'default',
+      preview: 'default',
       dnd: { enabled: false, from: '22:00', to: '07:00' },
       createdAt: new Date().toISOString(),
     }
@@ -452,7 +467,7 @@ export class AccountManager {
 
   patchAccount(
     id: string,
-    patch: Partial<Pick<Account, 'name' | 'color' | 'muted' | 'sound' | 'dnd'>>,
+    patch: Partial<Pick<Account, 'name' | 'color' | 'muted' | 'sound' | 'dnd' | 'preview'>>,
   ): void {
     this.store.update((s) => ({
       ...s,
@@ -465,6 +480,7 @@ export class AccountManager {
         if (typeof patch.muted === 'boolean') next.muted = patch.muted
         if (patch.sound) next.sound = patch.sound
         if (patch.dnd) next.dnd = patch.dnd
+        if (patch.preview) next.preview = patch.preview
         return next
       }),
     }))

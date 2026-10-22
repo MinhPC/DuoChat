@@ -3,6 +3,7 @@ import { IPC } from '../shared/ipc'
 import type { AccountManager } from './accounts'
 import { isInDnd } from './dnd'
 import { parseNotifyPayload } from './notifyPayload'
+import type { Account } from '../shared/types'
 import type { ToastManager } from './toast'
 
 /**
@@ -14,7 +15,7 @@ import type { ToastManager } from './toast'
 export function setupNotifications(
   manager: AccountManager,
   toasts: ToastManager,
-  showPreview: () => boolean,
+  showPreview: (account: Account) => boolean,
 ): void {
   ipcMain.on(IPC.notify, (event, raw: unknown) => {
     const accountId = manager.accountIdForWebContents(event.sender)
@@ -26,6 +27,6 @@ export function setupNotifications(
     manager.noteNotification(accountId)
     // Tắt thông báo, đang xem, hoặc trong khung không làm phiền: không hiện toast (badge vẫn đếm).
     if (account.muted || manager.isSeen(accountId) || isInDnd(account.dnd, new Date())) return
-    toasts.show(account, payload, showPreview())
+    toasts.show(account, payload, showPreview(account))
   })
 }

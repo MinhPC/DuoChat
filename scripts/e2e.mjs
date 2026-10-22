@@ -364,6 +364,11 @@ try {
   check('zoom bị kẹp tối đa 2.0', s.prefs.zoomFactor === 2)
   await api(`updatePrefs({ zoomFactor: 1 })`)
 
+  // ---------- RAM theo account, tự cập nhật ----------
+  const mem = await api('getMemory()')
+  check('RAM từng account đọc được (> 0 MB)', Object.keys(mem).length === 2 && Object.values(mem).every((v) => v > 0), JSON.stringify(mem))
+  check('tự cập nhật mặc định TẮT (không kết nối ra ngoài)', (await state()).prefs.autoUpdate === false)
+
   // Phím tắt (before-input-event) KHÔNG kiểm ở đây: CDP Input.dispatchKeyEvent không đi qua đường đó.
   // Xem scripts/e2e-keys.mjs (gửi phím thật của hệ điều hành).
 

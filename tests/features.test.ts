@@ -3,6 +3,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { isInDnd } from '../src/main/dnd'
+import { resolvePreview } from '../src/main/toastModel'
+import { canAutoUpdate } from '../src/main/updatePolicy'
 import { createLock, isValidPin, retryDelayMs, verifyPin } from '../src/main/lock'
 import { Logger, formatLogLine } from '../src/main/logger'
 import { defaultSettings, migrate } from '../src/main/store'
@@ -154,5 +156,36 @@ describe('isLoginTitle / isLoginPage', () => {
     expect(isLoginPage('https://chat.zalo.me/', 'Zalo - Đăng nhập Zalo')).toBe(true)
     expect(isLoginPage('https://id.zalo.me/account', 'Zalo')).toBe(true)
     expect(isLoginPage('https://chat.zalo.me/', 'Zalo')).toBe(false)
+  })
+})
+
+describe('resolvePreview', () => {
+  it('theo cài đặt chung, hoặc ghi đè theo account', () => {
+    expect(resolvePreview('default', true)).toBe(true)
+    expect(resolvePreview('default', false)).toBe(false)
+    expect(resolvePreview('show', false)).toBe(true)
+    expect(resolvePreview('hide', true)).toBe(false)
+  })
+  it('normalize: preview lạ về default, autoUpdate mặc định tắt', () => {
+    const acc = {
+      id: 'a',
+      name: 'A',
+      color: '#2563eb',
+      order: 0,
+      createdAt: '2026-01-01T00:00:00.000Z',
+    }
+    const s = migrate({ ...defaultSettings(), accounts: [{ ...acc, preview: 'weird' }] })
+    expect(s.accounts[0].preview).toBe('default')
+    expect(s.autoUpdate).toBe(false)
+    expect(migrate({ ...defaultSettings(), autoUpdate: true }).autoUpdate).toBe(true)
+  })
+})
+
+describe('canAutoUpdate', () => {
+  it('chỉ chạy khi bật + đã đóng gói + không phải portable', () => {
+    expect(canAutoUpdate({ enabled: true, packaged: true, portable: false })).toBe(true)
+    expect(canAutoUpdate({ enabled: false, packaged: true, portable: false })).toBe(false)
+    expect(canAutoUpdate({ enabled: true, packaged: false, portable: false })).toBe(false)
+    expect(canAutoUpdate({ enabled: true, packaged: true, portable: true })).toBe(false)
   })
 })

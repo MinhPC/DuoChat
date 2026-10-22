@@ -3,6 +3,7 @@ import path from 'node:path'
 import {
   ACCOUNT_PALETTE,
   ACCOUNT_SOUNDS,
+  PREVIEW_MODES,
   AUTO_LOCK_OPTIONS,
   MAX_ZOOM,
   MIN_ZOOM,
@@ -10,6 +11,7 @@ import {
   type AccountSound,
   type DndSchedule,
   type LockSettings,
+  type PreviewMode,
   type LayoutSettings,
   type Settings,
 } from '../shared/types'
@@ -34,6 +36,7 @@ export function defaultSettings(): Settings {
     minimizeToTray: true,
     zoomFactor: 1,
     notifyPreview: false,
+    autoUpdate: false,
     lock: { enabled: false, salt: '', hash: '', autoLockMinutes: 5 },
     window: { width: 1280, height: 800, maximized: false },
     pendingPartitionCleanup: [],
@@ -104,6 +107,9 @@ function normalizeAccounts(input: unknown): Account[] {
           ? (a.sound as AccountSound)
           : 'default',
         dnd: normalizeDnd(a.dnd),
+        preview: (PREVIEW_MODES as readonly unknown[]).includes(a.preview)
+          ? (a.preview as PreviewMode)
+          : 'default',
         createdAt: str(a.createdAt) ?? new Date(0).toISOString(),
       },
     })
@@ -189,6 +195,7 @@ export function normalizeSettings(input: Json): Settings {
     startMinimized: bool(input.startMinimized, d.startMinimized),
     minimizeToTray: bool(input.minimizeToTray, d.minimizeToTray),
     notifyPreview: bool(input.notifyPreview, d.notifyPreview),
+    autoUpdate: bool(input.autoUpdate, d.autoUpdate),
     lock: normalizeLock(input.lock),
     zoomFactor: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, num(input.zoomFactor, d.zoomFactor))),
     window: {

@@ -1,5 +1,5 @@
 import { vi } from '../shared/i18n/vi'
-import type { Account, AccountSound, Rect } from '../shared/types'
+import type { Account, AccountSound, PreviewMode, Rect } from '../shared/types'
 
 export const TOAST_WIDTH = 360
 export const TOAST_HEIGHT = 92
@@ -19,6 +19,11 @@ export interface ToastView {
   sound: AccountSound
   /** Phát âm báo cho lần cập nhật này (tin mới đến), không phát khi chỉ vẽ lại. */
   playSound: boolean
+}
+
+/** Kết hợp tùy chọn của account với cài đặt chung: hiện nội dung tin hay không. */
+export function resolvePreview(mode: PreviewMode, globalPreview: boolean): boolean {
+  return mode === 'show' ? true : mode === 'hide' ? false : globalPreview
 }
 
 export function initialOf(name: string): string {

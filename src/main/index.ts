@@ -5,6 +5,7 @@ import { vi } from '../shared/i18n/vi'
 import { AccountManager } from './accounts'
 import { isInDnd } from './dnd'
 import { Logger } from './logger'
+import { Updater } from './updater'
 import { updateTaskbarBadge } from './badge'
 import { cleanupOrphanPartitions } from './cleanup'
 import { registerIpc } from './ipc'
@@ -12,6 +13,7 @@ import { setupNotifications } from './notifications'
 import { attachShortcuts } from './shortcuts'
 import { SettingsStore } from './store'
 import { ToastManager } from './toast'
+import { resolvePreview } from './toastModel'
 import { AppTray } from './tray'
 import { createMainWindow } from './window'
 
@@ -116,9 +118,19 @@ function start(): void {
   })
   manager.onNotice((key) => win.webContents.send(IPC.notice, key))
 
-  registerIpc(win, manager, store, applyLoginItem)
+  const updater = new Updater(log, () => win.webContents.send(IPC.notice, 'updateReady'), {
+    packaged: app.isPackaged,
+    portable: Boolean(process.env.PORTABLE_EXECUTABLE_FILE),
+  })
+  const applyUpdater = (): void => updater.setEnabled(store.get().autoUpdate)
+  registerIpc(win, manager, store, applyLoginItem, applyUpdater)
+  applyUpdater()
   // Đang khóa thì không bao giờ lộ nội dung tin trong toast.
-  setupNotifications(manager, toasts, () => store.get().notifyPreview && !manager.isLocked())
+  setupNotifications(
+    manager,
+    toasts,
+    (account) => !manager.isLocked() && resolvePreview(account.preview, store.get().notifyPreview),
+  )
   manager.onSessionExpired((id) => {
     const account = manager.getAccount(id)
     if (account && !account.muted && !isInDnd(account.dnd, new Date())) {

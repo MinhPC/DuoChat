@@ -19,6 +19,7 @@ export const IPC = {
   setOverlay: 'ui:overlay',
   setDragging: 'ui:dragging',
   updatePrefs: 'settings:update',
+  getMemory: 'state:memory',
   lockNow: 'lock:now',
   unlock: 'lock:unlock',
   setPin: 'lock:set',
@@ -34,10 +35,15 @@ export const IPC = {
 
 export type Prefs = Pick<
   Settings,
-  'startWithWindows' | 'startMinimized' | 'minimizeToTray' | 'zoomFactor' | 'notifyPreview'
+  | 'startWithWindows'
+  | 'startMinimized'
+  | 'minimizeToTray'
+  | 'zoomFactor'
+  | 'notifyPreview'
+  | 'autoUpdate'
 >
 
-export type NoticeKey = 'narrowScreen'
+export type NoticeKey = 'narrowScreen' | 'updateReady'
 
 /** Kết quả thao tác dùng PIN. `retryAfterMs` > 0: phải chờ trước khi thử tiếp. */
 export interface PinResult {
@@ -79,6 +85,8 @@ export interface InvokeMap {
   [IPC.setOverlay]: { in: boolean; out: void }
   [IPC.setDragging]: { in: boolean; out: void }
   [IPC.updatePrefs]: { in: Partial<Prefs>; out: void }
+  /** RAM (MB, working set) của tiến trình render từng account. */
+  [IPC.getMemory]: { in: void; out: Record<string, number> }
   [IPC.lockNow]: { in: void; out: void }
   [IPC.unlock]: { in: string; out: PinResult }
   [IPC.setPin]: { in: { pin: string; current?: string }; out: PinResult }
@@ -105,6 +113,7 @@ export interface ShellApi {
   setOverlay(open: boolean): Promise<void>
   setDragging(dragging: boolean): Promise<void>
   updatePrefs(prefs: Partial<Prefs>): Promise<void>
+  getMemory(): Promise<Record<string, number>>
   lockNow(): Promise<void>
   unlock(pin: string): Promise<PinResult>
   setPin(pin: string, current?: string): Promise<PinResult>

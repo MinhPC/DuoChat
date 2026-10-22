@@ -1,6 +1,10 @@
 export const ACCOUNT_SOUNDS = ['default', 'soft', 'off'] as const
 export type AccountSound = (typeof ACCOUNT_SOUNDS)[number]
 
+/** Hiện nội dung tin trong thông báo: theo cài đặt chung, luôn hiện, hoặc luôn ẩn. */
+export const PREVIEW_MODES = ['default', 'show', 'hide'] as const
+export type PreviewMode = (typeof PREVIEW_MODES)[number]
+
 /** Khung giờ không làm phiền (HH:MM, 24h). Có thể qua nửa đêm, vd 22:00 → 07:00. */
 export interface DndSchedule {
   enabled: boolean
@@ -24,6 +28,7 @@ export interface Account {
   order: number
   muted: boolean // tắt thông báo (badge vẫn đếm)
   sound: AccountSound // âm báo riêng của account
+  preview: PreviewMode // hiện nội dung tin trong thông báo của account này
   dnd: DndSchedule // khung giờ không làm phiền (badge vẫn đếm)
   createdAt: string // ISO
 }
@@ -57,6 +62,7 @@ export interface Settings {
   minimizeToTray: boolean // bấm X → ẩn xuống tray
   zoomFactor: number // 0.5–2.0, áp cho mọi view Zalo
   lock: LockSettings
+  autoUpdate: boolean // kiểm tra bản cập nhật qua GitHub (mặc định tắt: app cam kết không gửi dữ liệu ra ngoài)
   notifyPreview: boolean // hiện nội dung tin trong thông báo (mặc định ẩn để riêng tư)
   window: WindowState
   // id account đã xóa, thư mục partition sẽ được xóa hẳn ở lần khởi động sau (mục 2.5.4)

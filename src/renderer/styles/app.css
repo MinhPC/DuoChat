@@ -428,3 +428,9 @@ button {
 .row > label {
   flex: 1;
 }
+
+.row.mem {
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 13px;
+}

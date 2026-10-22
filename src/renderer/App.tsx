@@ -77,7 +77,12 @@ export function App(): React.JSX.Element | null {
         />
       )}
       {dialog?.kind === 'settings' && (
-        <SettingsDialog prefs={state.prefs} lock={state.lock} onClose={closeDialog} />
+        <SettingsDialog
+          prefs={state.prefs}
+          lock={state.lock}
+          accounts={state.accounts}
+          onClose={closeDialog}
+        />
       )}
       {state.lock.locked && <LockScreen />}
       {toast && (

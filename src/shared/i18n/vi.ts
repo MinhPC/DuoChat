@@ -60,13 +60,19 @@ export const vi = {
     startMinimized: 'Khi tự khởi động, chỉ hiện ở khay hệ thống',
     minimizeToTray: 'Bấm X chỉ ẩn xuống khay hệ thống',
     notifyPreview: 'Hiện nội dung tin nhắn trong thông báo (mặc định ẩn)',
+    autoUpdate: 'Tự kiểm tra bản cập nhật (kết nối GitHub, chỉ bản cài đặt)',
+    memory: 'Bộ nhớ (RAM) mỗi tài khoản',
+    memoryNote:
+      'Mỗi tài khoản là một tiến trình riêng. Số liệu gần đúng, chưa gồm tiến trình GPU/chung.',
     zoom: 'Thu phóng nội dung',
     sessionNote:
       'Lưu ý: nếu Zalo Web đăng xuất khi tắt app, bạn cần quét lại mã QR. DuoChat không sao chép cookie hay vượt cơ chế của Zalo.',
   },
   notice: {
     narrowScreen: 'Màn hình hẹp, Zalo Web có thể bị chật.',
+    updateReady: 'Đã tải bản cập nhật mới, sẽ được cài khi bạn thoát DuoChat.',
   },
+  previewModes: { default: 'Theo cài đặt chung', show: 'Luôn hiện', hide: 'Luôn ẩn' },
   sounds: { default: 'Mặc định', soft: 'Nhẹ', off: 'Không âm' },
   toast: {
     newMessage: 'Có tin nhắn mới',
@@ -79,6 +85,7 @@ export const vi = {
     rename: 'Đổi tên…',
     color: 'Đổi màu',
     sound: 'Âm báo',
+    preview: 'Nội dung tin trong thông báo',
     dnd: 'Không làm phiền…',
     mute: 'Tắt thông báo',
     logout: 'Đăng xuất nhanh',
