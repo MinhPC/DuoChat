@@ -1,0 +1,15 @@
+appId: vn.duochat.app
+productName: DuoChat
+directories:
+  output: dist
+files:
+  - out/**/*
+  - package.json
+win:
+  icon: resources/icon.png
+  target:
+    - { target: nsis, arch: [x64] }
+    - { target: portable, arch: [x64] }
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
