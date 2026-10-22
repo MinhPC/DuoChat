@@ -66,6 +66,8 @@ export interface AppState {
   unread: Record<string, number>
   /** Account đang ở trang đăng nhập Zalo (chưa đăng nhập hoặc phiên hết hạn). */
   needsLogin: Record<string, boolean>
+  /** Account không tải được trang (mất mạng, hoặc view crash liên tục nên đã ngừng tự tải lại). */
+  loadFailed: Record<string, boolean>
   totalUnread: number
   frames: { single: Rect | null; left: Rect | null; right: Rect | null }
   divider: Rect | null

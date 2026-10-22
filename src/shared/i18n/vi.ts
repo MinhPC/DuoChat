@@ -31,6 +31,7 @@ export const vi = {
     hint: 'Trong khung giờ này không hiện thông báo của tài khoản, số chưa đọc vẫn được đếm.',
   },
   loginMark: 'Cần đăng nhập (quét mã QR)',
+  loadFailedMark: 'Không tải được trang (Ctrl+R để thử lại)',
   sidebar: {
     addAccount: 'Thêm tài khoản',
     toggleSplit: 'Chia đôi màn hình (Ctrl+\\)',

@@ -116,6 +116,11 @@ img.avatar {
   text-align: center;
 }
 
+.fail-mark {
+  background: #ef4444;
+  color: #fff;
+}
+
 .login-mark {
   position: absolute;
   top: -6px;

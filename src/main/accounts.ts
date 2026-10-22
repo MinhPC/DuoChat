@@ -83,6 +83,7 @@ export class AccountManager {
   private pinFailures = 0
   private retryUntil = 0
   private readonly needsLogin = new Map<string, boolean>()
+  private readonly loadFailed = new Map<string, boolean>()
   private readonly loadAttempts = new Map<string, number>()
   private readonly retryTimers = new Map<string, NodeJS.Timeout>()
   private readonly crashes = new Map<string, number[]>()
@@ -175,13 +176,17 @@ export class AccountManager {
     wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
       if (isMainFrame) this.onNavigated(account.id, url)
     })
-    wc.on('did-finish-load', () => this.loadAttempts.delete(account.id))
+    wc.on('did-finish-load', () => {
+      this.loadAttempts.delete(account.id)
+      this.setLoadFailed(account.id, false)
+    })
     wc.on('did-fail-load', (_e, code, _desc, _url, isMainFrame) => {
       // -3 = bị hủy do điều hướng khác. Mất mạng thì thử lại có backoff thay vì để khung trắng.
       if (!isMainFrame || code === -3) return
       const attempt = this.loadAttempts.get(account.id) ?? 0
       this.loadAttempts.set(account.id, attempt + 1)
       this.log.info('view_load_failed', { account: account.id, code, attempt })
+      this.setLoadFailed(account.id, true)
       clearTimeout(this.retryTimers.get(account.id))
       this.retryTimers.set(
         account.id,
@@ -198,7 +203,10 @@ export class AccountManager {
         reason: details.reason,
         reload: r.reload,
       })
-      if (!r.reload) return
+      if (!r.reload) {
+        this.setLoadFailed(account.id, true)
+        return
+      }
       setTimeout(() => {
         if (!wc.isDestroyed()) wc.reload()
       }, 1000)
@@ -208,6 +216,12 @@ export class AccountManager {
     attachLinkHandling(wc, partition, this.isDev, this.userAgent)
     attachContextMenu(wc)
     void wc.loadURL(ZALO_SERVICE.url)
+  }
+
+  private setLoadFailed(id: string, failed: boolean): void {
+    if ((this.loadFailed.get(id) ?? false) === failed) return
+    this.loadFailed.set(id, failed)
+    this.emit()
   }
 
   private prepareSession(partition: string): Session {
@@ -235,6 +249,7 @@ export class AccountManager {
     clearTimeout(this.retryTimers.get(id))
     this.retryTimers.delete(id)
     this.loadAttempts.delete(id)
+    this.loadFailed.delete(id)
     this.crashes.delete(id)
     this.win.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
@@ -313,11 +328,14 @@ export class AccountManager {
     }
     const needsLogin: Record<string, boolean> = {}
     for (const a of s.accounts) needsLogin[a.id] = this.needsLogin.get(a.id) ?? false
+    const loadFailed: Record<string, boolean> = {}
+    for (const a of s.accounts) loadFailed[a.id] = this.loadFailed.get(a.id) ?? false
     return {
       accounts: s.accounts,
       layout: s.layout,
       unread,
       needsLogin,
+      loadFailed,
       lock: {
         enabled: s.lock.enabled,
         locked: this.locked,

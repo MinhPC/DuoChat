@@ -6,6 +6,7 @@ interface Props {
   index: number
   unread: number
   needsLogin: boolean
+  loadFailed: boolean
   shown: boolean
   focused: boolean
   onSelect: () => void
@@ -21,7 +22,7 @@ export function AccountItem(p: Props): React.JSX.Element {
   return (
     <button
       className={cls}
-      title={`${account.name} (Ctrl+${p.index + 1})${account.muted ? ' 🔕' : ''}${p.needsLogin ? ` — ${vi.loginMark}` : ''}`}
+      title={`${account.name} (Ctrl+${p.index + 1})${account.muted ? ' 🔕' : ''}${p.needsLogin ? ` — ${vi.loginMark}` : ''}${p.loadFailed ? ` — ${vi.loadFailedMark}` : ''}`}
       draggable
       onClick={p.onSelect}
       onContextMenu={(e) => {
@@ -42,6 +43,7 @@ export function AccountItem(p: Props): React.JSX.Element {
       {p.unread > 0 && <span className="badge">{p.unread > 99 ? '99+' : p.unread}</span>}
       {account.muted && <span className="muted-mark">🔕</span>}
       {p.needsLogin && <span className="login-mark">!</span>}
+      {p.loadFailed && !p.needsLogin && <span className="login-mark fail-mark">×</span>}
     </button>
   )
 }
