@@ -15,6 +15,7 @@ publish:
   - provider: github
     owner: MinhPC
     repo: DuoChat
+    releaseType: release
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
