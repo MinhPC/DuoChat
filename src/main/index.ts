@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { app, BrowserWindow, Menu, powerMonitor, screen } from 'electron'
+import { app, BrowserWindow, dialog, Menu, powerMonitor, screen } from 'electron'
 import { IPC } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
 import { AccountManager } from './accounts'
@@ -118,10 +118,28 @@ function start(): void {
   })
   manager.onNotice((key) => win.webContents.send(IPC.notice, key))
 
-  const updater = new Updater(log, () => win.webContents.send(IPC.notice, 'updateReady'), {
-    packaged: app.isPackaged,
-    portable: Boolean(process.env.PORTABLE_EXECUTABLE_FILE),
-  })
+  const ask = async (message: string, yes: string, no: string): Promise<boolean> => {
+    const r = await dialog.showMessageBox(win, {
+      type: 'question',
+      title: 'DuoChat',
+      message,
+      buttons: [yes, no],
+      defaultId: 0,
+      cancelId: 1,
+    })
+    return r.response === 0
+  }
+  const updater = new Updater(
+    log,
+    {
+      confirmDownload: (v) => ask(vi.update.available(v), vi.update.download, vi.update.later),
+      confirmInstall: (v) => ask(vi.update.ready(v), vi.update.restart, vi.update.later),
+    },
+    {
+      packaged: app.isPackaged,
+      portable: Boolean(process.env.PORTABLE_EXECUTABLE_FILE),
+    },
+  )
   const applyUpdater = (): void => updater.setEnabled(store.get().autoUpdate)
   registerIpc(win, manager, store, applyLoginItem, applyUpdater, () => updater.checkNow())
   applyUpdater()

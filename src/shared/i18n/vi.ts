@@ -68,7 +68,7 @@ export const vi = {
     checking: 'Đang kiểm tra…',
     updateResult: {
       latest: (v: string) => `Bạn đang dùng bản mới nhất${v ? ` (${v})` : ''}.`,
-      available: (v: string) => `Có bản mới ${v}. Đang tải về, sẽ được cài khi bạn thoát DuoChat.`,
+      available: (v: string) => `Có bản mới ${v}.`,
       unsupported: 'Chỉ bản cài đặt (không phải portable hay bản dev) mới tự cập nhật được.',
       notFound:
         'Không tìm thấy bản phát hành (lỗi 404). Kho GitHub có thể đang ở chế độ riêng tư hoặc chưa có bản nào.',
@@ -83,6 +83,14 @@ export const vi = {
     zoom: 'Thu phóng nội dung',
     sessionNote:
       'Lưu ý: nếu Zalo Web đăng xuất khi tắt app, bạn cần quét lại mã QR. DuoChat không sao chép cookie hay vượt cơ chế của Zalo.',
+  },
+  update: {
+    available: (v: string) => `Có bản cập nhật DuoChat ${v}. Bạn có muốn tải và cập nhật không?`,
+    ready: (v: string) =>
+      `Đã tải xong DuoChat ${v}. Khởi động lại để cài ngay? (Chọn "Để sau" thì bản mới được cài khi bạn thoát DuoChat.)`,
+    download: 'Cập nhật',
+    restart: 'Khởi động lại',
+    later: 'Để sau',
   },
   notice: {
     narrowScreen: 'Màn hình hẹp, Zalo Web có thể bị chật.',

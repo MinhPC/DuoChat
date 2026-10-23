@@ -15,22 +15,48 @@ export class Updater {
   private first: NodeJS.Timeout | null = null
   private wired = false
 
+  private asking = false
+  private declined = new Set<string>()
+
   constructor(
     private readonly log: Logger,
-    private readonly onDownloaded: (version: string) => void,
+    private readonly ui: {
+      /** Hỏi người dùng có tải bản mới không. */
+      confirmDownload(version: string): Promise<boolean>
+      /** Hỏi người dùng có khởi động lại để cài ngay không (không thì cài khi thoát). */
+      confirmInstall(version: string): Promise<boolean>
+    },
     private readonly env: { packaged: boolean; portable: boolean },
   ) {}
 
   private wire(): void {
     if (this.wired) return
     this.wired = true
-    autoUpdater.autoDownload = true
+    autoUpdater.autoDownload = false // hỏi người dùng trước khi tải
     autoUpdater.autoInstallOnAppQuit = true
+    autoUpdater.on('update-available', (info) => void this.offer(info.version))
     autoUpdater.on('update-downloaded', (info) => {
       this.log.info('update_downloaded', { version: info.version })
-      this.onDownloaded(info.version)
+      void this.ui.confirmInstall(info.version).then((now) => {
+        if (now) autoUpdater.quitAndInstall()
+      })
     })
     autoUpdater.on('error', (e) => this.log.info('update_error', { message: String(e.message) }))
+  }
+
+  private async offer(version: string): Promise<void> {
+    if (this.asking || this.declined.has(version)) return
+    this.asking = true
+    try {
+      if (await this.ui.confirmDownload(version)) await autoUpdater.downloadUpdate()
+      else this.declined.add(version) // không hỏi lại trong phiên này
+    } catch (e) {
+      this.log.info('update_download_failed', {
+        message: String((e as Error).message).slice(0, 200),
+      })
+    } finally {
+      this.asking = false
+    }
   }
 
   /**
