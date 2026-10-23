@@ -19,6 +19,8 @@ export interface ToastView {
   sound: AccountSound
   /** Phát âm báo cho lần cập nhật này (tin mới đến), không phát khi chỉ vẽ lại. */
   playSound: boolean
+  /** Ảnh đại diện người gửi (data URL); null thì vẽ chữ cái đầu của account. */
+  senderAvatar: string | null
 }
 
 /** Kết hợp tùy chọn của account với cài đặt chung: hiện nội dung tin hay không. */
@@ -43,6 +45,7 @@ export function buildToastView(opts: {
   playSound: boolean
   /** `login`: thẻ báo phiên hết hạn (không phải tin nhắn). */
   kind?: 'message' | 'login'
+  senderAvatar?: string | null
 }): ToastView {
   const { account, count, preview } = opts
   const hidden = vi.toast
@@ -56,6 +59,7 @@ export function buildToastView(opts: {
       count: 1,
       sound: account.sound,
       playSound: opts.playSound && account.sound !== 'off',
+      senderAvatar: null,
     }
   }
   return {
@@ -72,6 +76,7 @@ export function buildToastView(opts: {
     count,
     sound: account.sound,
     playSound: opts.playSound && account.sound !== 'off',
+    senderAvatar: preview && opts.title ?(opts.senderAvatar ?? null) : null,
   }
 }
 

@@ -57,6 +57,7 @@ export class ToastManager {
     payload: { title: string; body: string },
     preview: boolean,
     kind: 'message' | 'login' = 'message',
+    senderAvatar: string | null = null,
   ): void {
     let entry = this.entries.get(account.id)
     if (!entry) {
@@ -75,6 +76,7 @@ export class ToastManager {
       body: payload.body,
       playSound: true,
       kind,
+      senderAvatar,
     })
     if (entry.ready) entry.win.webContents.send(IPC.toastData, view)
     else entry.pending = view

@@ -7,6 +7,7 @@ interface ToastView {
   count: number
   sound: 'default' | 'soft' | 'off'
   playSound: boolean
+  senderAvatar: string | null
 }
 
 declare global {
@@ -55,8 +56,13 @@ function playTone(kind: 'default' | 'soft'): void {
 
 function render(v: ToastView): void {
   const avatar = $('avatar')
-  avatar.style.background = v.color
-  avatar.textContent = v.initial
+  if (v.senderAvatar) {
+    avatar.style.background = `center / cover url("${v.senderAvatar}")`
+    avatar.textContent = ''
+  } else {
+    avatar.style.background = v.color
+    avatar.textContent = v.initial
+  }
   $('account').textContent = v.accountName
   $('title').textContent = v.title
   $('body').textContent = v.body

@@ -599,7 +599,7 @@ export class AccountManager {
   }
 
   /** Tải ảnh qua session của chính partition, thu nhỏ 96x96, trả data URL PNG (chỉ lưu cục bộ). */
-  private async fetchAvatar(id: string, url: string): Promise<string | null> {
+  async fetchAvatar(id: string, url: string): Promise<string | null> {
     try {
       // `res.url` của session.fetch luôn rỗng nên không kiểm tra được đích sau chuyển hướng: cấm chuyển hướng.
       // URL gốc đã qua allowlist trong parseProfile.

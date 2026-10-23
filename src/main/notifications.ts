@@ -3,6 +3,7 @@ import { IPC } from '../shared/ipc'
 import type { AccountManager } from './accounts'
 import { isInDnd } from './dnd'
 import { parseNotifyPayload } from './notifyPayload'
+import { isAllowedUrl } from './service'
 import type { Account } from '../shared/types'
 import type { ToastManager } from './toast'
 
@@ -27,6 +28,28 @@ export function setupNotifications(
     manager.noteNotification(accountId)
     // Tắt thông báo, đang xem, hoặc trong khung không làm phiền: không hiện toast (badge vẫn đếm).
     if (account.muted || manager.isSeen(accountId) || isInDnd(account.dnd, new Date())) return
-    toasts.show(account, payload, showPreview(account))
+    const preview = showPreview(account)
+    // Ảnh người gửi chỉ lấy khi được phép hiện nội dung tin (riêng tư như tên người gửi).
+    void senderAvatar(manager, accountId, preview ? payload.icon : null).then((avatar) => {
+      if (manager.getAccount(accountId)) toasts.show(account, payload, preview, 'message', avatar)
+    })
   })
+}
+
+const AVATAR_CACHE_MAX = 100
+const avatarCache = new Map<string, string | null>()
+
+/** Tải ảnh đại diện người gửi (qua session của account, có cache theo URL); lỗi thì null. */
+async function senderAvatar(
+  manager: AccountManager,
+  accountId: string,
+  url: string | null,
+): Promise<string | null> {
+  if (!url || !isAllowedUrl(url)) return null
+  const key = `${accountId} ${url}`
+  if (avatarCache.has(key)) return avatarCache.get(key) ?? null
+  const avatar = await manager.fetchAvatar(accountId, url)
+  if (avatarCache.size >= AVATAR_CACHE_MAX) avatarCache.delete(avatarCache.keys().next().value as string)
+  avatarCache.set(key, avatar)
+  return avatar
 }
