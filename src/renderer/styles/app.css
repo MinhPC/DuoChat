@@ -157,6 +157,34 @@ img.avatar {
   border-color: var(--accent);
 }
 
+.side-btn.has-dot {
+  position: relative;
+}
+
+/* Chấm báo có bản cập nhật mới trên nút Cài đặt. */
+.update-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 2px solid var(--panel);
+}
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.12);
+}
+
 .side-btn.on {
   background: var(--accent);
   border-color: var(--accent);

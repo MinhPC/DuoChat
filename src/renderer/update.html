@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DuoChat</title>
+    <link rel="stylesheet" href="./styles/update.css" />
+  </head>
+  <body>
+    <main id="card" class="card" role="dialog" aria-labelledby="title" hidden>
+      <div class="drag"></div>
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 4v11" />
+          <path d="m7 11 5 5 5-5" />
+          <path d="M5 20h14" />
+        </svg>
+      </div>
+      <h1 id="title" class="title"></h1>
+      <p id="body" class="body"></p>
+      <p id="note" class="note"></p>
+      <div class="actions">
+        <button id="later" class="btn ghost" type="button"></button>
+        <button id="primary" class="btn primary" type="button"></button>
+      </div>
+    </main>
+    <script type="module" src="./update.ts"></script>
+  </body>
+</html>

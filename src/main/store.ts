@@ -37,7 +37,6 @@ export function defaultSettings(): Settings {
     minimizeToTray: true,
     zoomFactor: 1,
     notifyPreview: false,
-    autoUpdate: false,
     lock: { enabled: false, salt: '', hash: '', autoLockMinutes: 5 },
     window: { width: 1280, height: 800, maximized: false },
     pendingPartitionCleanup: [],
@@ -204,7 +203,6 @@ export function normalizeSettings(input: Json): Settings {
     startMinimized: bool(input.startMinimized, d.startMinimized),
     minimizeToTray: bool(input.minimizeToTray, d.minimizeToTray),
     notifyPreview: bool(input.notifyPreview, d.notifyPreview),
-    autoUpdate: bool(input.autoUpdate, d.autoUpdate),
     lock: normalizeLock(input.lock),
     zoomFactor: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, num(input.zoomFactor, d.zoomFactor))),
     window: {

@@ -42,6 +42,7 @@ const api: ShellApi = {
   getMemory: () => invoke(IPC.getMemory),
   getDisk: () => invoke(IPC.getDisk),
   checkUpdate: () => invoke(IPC.checkUpdate),
+  startUpdate: () => invoke(IPC.startUpdate),
   lockNow: () => invoke(IPC.lockNow),
   unlock: (pin) => invoke(IPC.unlock, pin),
   setPin: (pin, current) => invoke(IPC.setPin, { pin, current }),

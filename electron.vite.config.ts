@@ -15,6 +15,7 @@ export default defineConfig({
           shell: resolve(__dirname, 'src/preload/shell.ts'),
           service: resolve(__dirname, 'src/preload/service.ts'),
           toast: resolve(__dirname, 'src/preload/toast.ts'),
+          updatePrompt: resolve(__dirname, 'src/preload/updatePrompt.ts'),
         },
       },
     },
@@ -26,6 +27,7 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
           toast: resolve(__dirname, 'src/renderer/toast.html'),
+          update: resolve(__dirname, 'src/renderer/update.html'),
         },
       },
     },

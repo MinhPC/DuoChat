@@ -1,0 +1,119 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font:
+    14px/1.45 'Segoe UI',
+    system-ui,
+    sans-serif;
+  user-select: none;
+}
+
+.card {
+  position: relative;
+  box-sizing: border-box;
+  height: calc(100% - 24px);
+  margin: 12px;
+  padding: 28px 28px 22px;
+  display: flex;
+  flex-direction: column;
+  color: #f3f4f6;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  animation: in 0.18s ease-out;
+}
+
+.card[hidden] {
+  display: none;
+}
+
+@keyframes in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+/* Kéo cửa sổ bằng dải phía trên (cửa sổ không có thanh tiêu đề). */
+.drag {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 36px;
+  -webkit-app-region: drag;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.body {
+  margin: 0 0 4px;
+  color: #e5e7eb;
+}
+
+.note {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 12.5px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.btn {
+  min-width: 104px;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.primary {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.primary:hover {
+  background: #2563eb;
+}
+
+.ghost {
+  background: transparent;
+  color: #d1d5db;
+  border-color: #374151;
+}
+
+.ghost:hover {
+  background: #374151;
+  color: #fff;
+}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import type { AppState, PinResult, Prefs, UpdateCheckResult } from '../../shared/ipc'
+import type { AppState, PinResult, Prefs, UpdateCheckResult, UpdateState } from '../../shared/ipc'
 import { formatBytes } from '../../shared/format'
 import { vi } from '../../shared/i18n/vi'
 import { AUTO_LOCK_OPTIONS, MAX_ZOOM, MIN_ZOOM, type Account } from '../../shared/types'
 
 interface Props {
   prefs: Prefs
+  update: UpdateState
   lock: AppState['lock']
   accounts: Account[]
   onClose: () => void
@@ -13,7 +14,7 @@ interface Props {
 
 type PinMode = 'idle' | 'set' | 'change' | 'remove'
 
-export function SettingsDialog({ prefs, lock, accounts, onClose }: Props): React.JSX.Element {
+export function SettingsDialog({ prefs, update, lock, accounts, onClose }: Props): React.JSX.Element {
   const t = vi.settings
   const l = vi.lock
   const [mode, setMode] = useState<PinMode>('idle')
@@ -94,7 +95,7 @@ export function SettingsDialog({ prefs, lock, accounts, onClose }: Props): React
   }
 
   const check = (
-    key: 'startWithWindows' | 'startMinimized' | 'minimizeToTray' | 'notifyPreview' | 'autoUpdate',
+    key: 'startWithWindows' | 'startMinimized' | 'minimizeToTray' | 'notifyPreview',
     label: string,
   ): React.JSX.Element => (
     <label className="check">
@@ -132,11 +133,28 @@ export function SettingsDialog({ prefs, lock, accounts, onClose }: Props): React
     <div className="backdrop" onMouseDown={onClose}>
       <div className="dialog" onMouseDown={(e) => e.stopPropagation()}>
         <h2>{t.title}</h2>
+        {update.status !== 'none' && (
+          <div className="update-banner" role="status">
+            <span>
+              {update.status === 'available' && t.updateAvailable(update.version ?? '')}
+              {update.status === 'downloading' && t.updateDownloading(update.version ?? '')}
+              {update.status === 'ready' && t.updateReady(update.version ?? '')}
+            </span>
+            {update.status !== 'downloading' && (
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => void window.duochat.startUpdate()}
+              >
+                {update.status === 'ready' ? t.updateInstall : t.updateAction}
+              </button>
+            )}
+          </div>
+        )}
         {check('startWithWindows', t.startWithWindows)}
         {check('startMinimized', t.startMinimized)}
         {check('minimizeToTray', t.minimizeToTray)}
         {check('notifyPreview', t.notifyPreview)}
-        {check('autoUpdate', t.autoUpdate)}
         <div className="row">
           <button
             type="button"

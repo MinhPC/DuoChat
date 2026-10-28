@@ -36,6 +36,7 @@ export const vi = {
     addAccount: 'Thêm tài khoản',
     toggleSplit: 'Chia đôi màn hình (Ctrl+\\)',
     settings: 'Cài đặt',
+    settingsUpdate: 'Cài đặt (có bản cập nhật mới)',
     lock: 'Khóa ngay',
   },
   empty: {
@@ -63,8 +64,12 @@ export const vi = {
     startMinimized: 'Khi tự khởi động, chỉ hiện ở khay hệ thống',
     minimizeToTray: 'Bấm X chỉ ẩn xuống khay hệ thống',
     notifyPreview: 'Hiện nội dung tin nhắn trong thông báo (mặc định ẩn)',
-    autoUpdate: 'Tự kiểm tra bản cập nhật (kết nối GitHub, chỉ bản cài đặt)',
     checkUpdate: 'Kiểm tra bản cập nhật ngay',
+    updateAvailable: (v: string) => `Có bản mới ${v}`,
+    updateDownloading: (v: string) => `Đang tải bản ${v}…`,
+    updateReady: (v: string) => `Đã tải xong bản ${v}`,
+    updateAction: 'Cập nhật',
+    updateInstall: 'Cài đặt',
     checking: 'Đang kiểm tra…',
     updateResult: {
       latest: (v: string) => `Bạn đang dùng bản mới nhất${v ? ` (${v})` : ''}.`,
@@ -85,9 +90,13 @@ export const vi = {
       'Lưu ý: nếu Zalo Web đăng xuất khi tắt app, bạn cần quét lại mã QR. DuoChat không sao chép cookie hay vượt cơ chế của Zalo.',
   },
   update: {
-    available: (v: string) => `Có bản cập nhật DuoChat ${v}. Bạn có muốn tải và cập nhật không?`,
-    ready: (v: string) =>
-      `Đã tải xong DuoChat ${v}. Khởi động lại để cài ngay? (Chọn "Để sau" thì bản mới được cài khi bạn thoát DuoChat.)`,
+    availableTitle: 'Có bản cập nhật mới',
+    availableBody: (v: string, current: string) =>
+      `DuoChat ${v} đã sẵn sàng. Bạn đang dùng bản ${current}.`,
+    availableNote: 'Bản mới được tải ở nền, bạn vẫn dùng DuoChat bình thường trong lúc chờ.',
+    readyTitle: 'Đã tải xong bản cập nhật',
+    readyBody: (v: string) => `DuoChat ${v} đã sẵn sàng để cài đặt.`,
+    readyNote: 'Chọn "Để sau" thì bản mới được cài khi bạn thoát DuoChat.',
     download: 'Cập nhật',
     restart: 'Khởi động lại',
     later: 'Để sau',

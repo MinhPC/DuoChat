@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { app, BrowserWindow, dialog, Menu, powerMonitor, screen } from 'electron'
+import { app, BrowserWindow, Menu, powerMonitor, screen } from 'electron'
 import { IPC } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
 import { AccountManager } from './accounts'
@@ -15,6 +15,7 @@ import { SettingsStore } from './store'
 import { ToastManager } from './toast'
 import { resolvePreview } from './toastModel'
 import { AppTray } from './tray'
+import { askUpdate } from './updatePrompt'
 import { createMainWindow, showMainWindow } from './window'
 
 const isDev = !app.isPackaged
@@ -117,31 +118,47 @@ function start(): void {
   })
   manager.onNotice((key) => win.webContents.send(IPC.notice, key))
 
-  const ask = async (message: string, yes: string, no: string): Promise<boolean> => {
-    const r = await dialog.showMessageBox(win, {
-      type: 'question',
-      title: 'DuoChat',
-      message,
-      buttons: [yes, no],
-      defaultId: 0,
-      cancelId: 1,
-    })
-    return r.response === 0
-  }
   const updater = new Updater(
     log,
     {
-      confirmDownload: (v) => ask(vi.update.available(v), vi.update.download, vi.update.later),
-      confirmInstall: (v) => ask(vi.update.ready(v), vi.update.restart, vi.update.later),
+      confirmDownload: (v) =>
+        askUpdate(
+          {
+            title: vi.update.availableTitle,
+            body: vi.update.availableBody(v, app.getVersion()),
+            note: vi.update.availableNote,
+            primary: vi.update.download,
+            secondary: vi.update.later,
+          },
+          win,
+        ),
+      confirmInstall: (v) =>
+        askUpdate(
+          {
+            title: vi.update.readyTitle,
+            body: vi.update.readyBody(v),
+            note: vi.update.readyNote,
+            primary: vi.update.restart,
+            secondary: vi.update.later,
+          },
+          win,
+        ),
     },
     {
       packaged: app.isPackaged,
       portable: Boolean(process.env.PORTABLE_EXECUTABLE_FILE),
     },
+    (state) => manager.setUpdateState(state),
   )
-  const applyUpdater = (): void => updater.setEnabled(store.get().autoUpdate)
-  registerIpc(win, manager, store, applyLoginItem, applyUpdater, () => updater.checkNow())
-  applyUpdater()
+  registerIpc(
+    win,
+    manager,
+    store,
+    applyLoginItem,
+    () => updater.checkNow(),
+    () => updater.startUpdate(),
+  )
+  updater.start()
   // Đang khóa thì không bao giờ lộ nội dung tin trong toast.
   setupNotifications(
     manager,

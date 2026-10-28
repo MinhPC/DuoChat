@@ -28,6 +28,14 @@ describe('hợp đồng IPC', () => {
     expect(src).not.toMatch(/from '\.\.\/shared/)
   })
 
+  it('preload updatePrompt hardcode đúng các kênh và không import src/shared', () => {
+    const src = read('src/preload/updatePrompt.ts')
+    for (const ch of [IPC.updatePromptData, IPC.updatePromptChoice]) {
+      expect(src).toContain(`'${ch}'`)
+    }
+    expect(src).not.toMatch(/from '\.\.\/shared/)
+  })
+
   it('tên kênh không trùng nhau', () => {
     const values = Object.values(IPC)
     expect(new Set(values).size).toBe(values.length)

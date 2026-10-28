@@ -70,9 +70,10 @@ Phiên Zalo được giữ sau khi tắt app (đã kiểm chứng: cookie xác t
 Cài đặt hiển thị RAM của từng tài khoản (làm mới mỗi 3 giây). Nội dung tin trong thông báo có thể đặt riêng từng tài
 khoản (chuột phải avatar → Nội dung tin trong thông báo).
 
-**Tự cập nhật mặc định tắt** vì DuoChat cam kết không gửi dữ liệu ra ngoài. Bật trong Cài đặt thì app kiểm tra GitHub
-Releases (`MinhPC/DuoChat`) mỗi 6 giờ, chỉ tải file `latest.yml`. Chỉ áp dụng cho bản cài đặt, không áp dụng cho bản
-portable. Phát hành: đẩy tag `vX.Y.Z` (khớp `version` trong `package.json`), workflow `release.yml` sẽ build và đăng lên GitHub Releases. Bản chưa ký số: bản cập nhật chỉ được tin dựa trên tài khoản GitHub của chủ repo, nên cân nhắc ký số trước khi khuyến khích người dùng bật tự cập nhật.
+**Tự kiểm tra cập nhật luôn bật, không có tùy chọn tắt.** App kiểm tra GitHub Releases (`MinhPC/DuoChat`) sau 30 giây
+khi khởi động rồi mỗi 6 giờ; mỗi lần chỉ tải file `latest.yml`, không gửi nội dung hay danh tính người dùng. Có bản mới
+thì nút Cài đặt hiện chấm đỏ; bản mới chỉ được tải khi bạn bấm Cập nhật. Chỉ áp dụng cho bản cài đặt, không áp dụng cho bản
+portable. Phát hành: đẩy tag `vX.Y.Z` (khớp `version` trong `package.json`), workflow `release.yml` sẽ build và đăng lên GitHub Releases. Bản chưa ký số: bản cập nhật chỉ được tin dựa trên tài khoản GitHub của chủ repo, nên cân nhắc ký số.
 
 ### Nhật ký lỗi
 

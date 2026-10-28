@@ -166,7 +166,7 @@ describe('resolvePreview', () => {
     expect(resolvePreview('show', false)).toBe(true)
     expect(resolvePreview('hide', true)).toBe(false)
   })
-  it('normalize: preview lạ về default, autoUpdate mặc định tắt', () => {
+  it('normalize: preview lạ về default', () => {
     const acc = {
       id: 'a',
       name: 'A',
@@ -176,16 +176,13 @@ describe('resolvePreview', () => {
     }
     const s = migrate({ ...defaultSettings(), accounts: [{ ...acc, preview: 'weird' }] })
     expect(s.accounts[0].preview).toBe('default')
-    expect(s.autoUpdate).toBe(false)
-    expect(migrate({ ...defaultSettings(), autoUpdate: true }).autoUpdate).toBe(true)
   })
 })
 
 describe('canAutoUpdate', () => {
-  it('chỉ chạy khi bật + đã đóng gói + không phải portable', () => {
-    expect(canAutoUpdate({ enabled: true, packaged: true, portable: false })).toBe(true)
-    expect(canAutoUpdate({ enabled: false, packaged: true, portable: false })).toBe(false)
-    expect(canAutoUpdate({ enabled: true, packaged: false, portable: false })).toBe(false)
-    expect(canAutoUpdate({ enabled: true, packaged: true, portable: true })).toBe(false)
+  it('chỉ chạy khi đã đóng gói + không phải portable', () => {
+    expect(canAutoUpdate({ packaged: true, portable: false })).toBe(true)
+    expect(canAutoUpdate({ packaged: false, portable: false })).toBe(false)
+    expect(canAutoUpdate({ packaged: true, portable: true })).toBe(false)
   })
 })

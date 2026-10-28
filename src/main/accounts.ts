@@ -11,7 +11,7 @@ import {
 } from 'electron'
 // ?raw: shim được đóng gói thành chuỗi và main tự chạy bằng executeJavaScript (mục 4).
 import shimSource from '../inject/notification-shim.js?raw'
-import type { AppState, NoticeKey, PinResult, Prefs } from '../shared/ipc'
+import type { AppState, NoticeKey, PinResult, Prefs, UpdateState } from '../shared/ipc'
 import {
   ACCOUNT_PALETTE,
   MAX_ZOOM,
@@ -79,6 +79,7 @@ export class AccountManager {
   private overlayOpen = false
   private dragging = false
   private narrowWarned = false
+  private updateState: UpdateState = { status: 'none' }
   private lastLayoutSignature = ''
   private locked = false
   private pinFailures = 0
@@ -325,7 +326,6 @@ export class AccountManager {
       minimizeToTray: s.minimizeToTray,
       zoomFactor: s.zoomFactor,
       notifyPreview: s.notifyPreview,
-      autoUpdate: s.autoUpdate,
     }
     const needsLogin: Record<string, boolean> = {}
     for (const a of s.accounts) needsLogin[a.id] = this.needsLogin.get(a.id) ?? false
@@ -347,6 +347,7 @@ export class AccountManager {
       divider: L.divider,
       sidebarWidth: SIDEBAR_WIDTH,
       prefs,
+      update: this.updateState,
       dragging: this.dragging,
     }
   }
@@ -428,6 +429,11 @@ export class AccountManager {
       for (const cb of this.noticeListeners) cb('narrowScreen')
     }
     return changed
+  }
+
+  setUpdateState(state: UpdateState): void {
+    this.updateState = state
+    this.emit()
   }
 
   /** Gọi khi cửa sổ đổi kích thước / DPI. Sự kiện resize/maximize/show đến dồn dập nên bỏ qua khi không có gì đổi. */

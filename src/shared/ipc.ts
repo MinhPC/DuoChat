@@ -22,6 +22,7 @@ export const IPC = {
   getMemory: 'state:memory',
   getDisk: 'state:disk',
   checkUpdate: 'update:check',
+  startUpdate: 'update:start',
   lockNow: 'lock:now',
   unlock: 'lock:unlock',
   setPin: 'lock:set',
@@ -33,6 +34,9 @@ export const IPC = {
   toastClick: 'toast:click',
   toastDismiss: 'toast:dismiss',
   toastHover: 'toast:hover',
+  // Kênh của cửa sổ hỏi cập nhật. Preload updatePrompt hardcode các chuỗi này (có test đối chiếu).
+  updatePromptData: 'updatePrompt:data',
+  updatePromptChoice: 'updatePrompt:choice',
 } as const
 
 export type Prefs = Pick<
@@ -42,7 +46,6 @@ export type Prefs = Pick<
   | 'minimizeToTray'
   | 'zoomFactor'
   | 'notifyPreview'
-  | 'autoUpdate'
 >
 
 export type NoticeKey =
@@ -60,6 +63,13 @@ export type NoticeKey =
 export interface UpdateCheckResult {
   status: 'latest' | 'available' | 'unsupported' | 'notFound' | 'error'
   /** Phiên bản mới (khi `available`) hoặc phiên bản đang chạy (khi `latest`). */
+  version?: string
+}
+
+/** Trạng thái bản cập nhật, dùng để hiện chấm báo trên nút Cài đặt. */
+export interface UpdateState {
+  status: 'none' | 'available' | 'downloading' | 'ready'
+  /** Phiên bản mới (khi khác `none`). */
   version?: string
 }
 
@@ -84,6 +94,7 @@ export interface AppState {
   divider: Rect | null
   sidebarWidth: number
   prefs: Prefs
+  update: UpdateState
   lock: { enabled: boolean; locked: boolean; autoLockMinutes: number }
   /** Đang kéo thanh chia: các view Zalo tạm ẩn để shell nhận được sự kiện chuột. */
   dragging: boolean
@@ -111,6 +122,8 @@ export interface InvokeMap {
   [IPC.getDisk]: { in: void; out: Record<string, number> }
   /** Kiểm tra bản mới ngay, kể cả khi tự kiểm tra đang tắt (chỉ chạy khi người dùng bấm). */
   [IPC.checkUpdate]: { in: void; out: UpdateCheckResult }
+  /** Người dùng bấm cập nhật: main mở hộp thoại xác nhận rồi tải/cài. */
+  [IPC.startUpdate]: { in: void; out: void }
   [IPC.lockNow]: { in: void; out: void }
   [IPC.unlock]: { in: string; out: PinResult }
   [IPC.setPin]: { in: { pin: string; current?: string }; out: PinResult }
@@ -140,6 +153,7 @@ export interface ShellApi {
   getMemory(): Promise<Record<string, number>>
   getDisk(): Promise<Record<string, number>>
   checkUpdate(): Promise<UpdateCheckResult>
+  startUpdate(): Promise<void>
   lockNow(): Promise<void>
   unlock(pin: string): Promise<PinResult>
   setPin(pin: string, current?: string): Promise<PinResult>

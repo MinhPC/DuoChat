@@ -23,8 +23,8 @@ export function registerIpc(
   manager: AccountManager,
   store: SettingsStore,
   applyLoginItem: () => void,
-  onPrefsChanged: () => void,
   checkUpdate: () => Promise<UpdateCheckResult>,
+  startUpdate: () => Promise<void>,
 ): void {
   const shellWc = win.webContents
 
@@ -162,6 +162,7 @@ export function registerIpc(
       return out
     },
     [IPC.checkUpdate]: () => checkUpdate(),
+    [IPC.startUpdate]: () => startUpdate(),
     [IPC.lockNow]: () => manager.lockNow(),
     [IPC.unlock]: (pin) => manager.unlock(pin),
     [IPC.setPin]: (input) => manager.setPin(input?.pin, input?.current),
@@ -181,13 +182,11 @@ export function registerIpc(
           typeof prefs.minimizeToTray === 'boolean' ? prefs.minimizeToTray : s.minimizeToTray,
         notifyPreview:
           typeof prefs.notifyPreview === 'boolean' ? prefs.notifyPreview : s.notifyPreview,
-        autoUpdate: typeof prefs.autoUpdate === 'boolean' ? prefs.autoUpdate : s.autoUpdate,
       }))
       if (typeof prefs.zoomFactor === 'number' && Number.isFinite(prefs.zoomFactor)) {
         manager.setZoom(prefs.zoomFactor)
       }
       applyLoginItem()
-      onPrefsChanged()
       manager.relayout()
     },
   }

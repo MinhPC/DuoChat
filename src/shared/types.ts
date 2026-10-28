@@ -64,7 +64,6 @@ export interface Settings {
   minimizeToTray: boolean // bấm X → ẩn xuống tray
   zoomFactor: number // 0.5–2.0, áp cho mọi view Zalo
   lock: LockSettings
-  autoUpdate: boolean // kiểm tra bản cập nhật qua GitHub (mặc định tắt: app cam kết không gửi dữ liệu ra ngoài)
   notifyPreview: boolean // hiện nội dung tin trong thông báo (mặc định ẩn để riêng tư)
   window: WindowState
   // id account đã xóa, thư mục partition sẽ được xóa hẳn ở lần khởi động sau (mục 2.5.4)

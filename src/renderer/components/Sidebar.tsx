@@ -73,8 +73,13 @@ export function Sidebar({ state, onAdd, onSettings }: Props): React.JSX.Element 
             🔒
           </button>
         )}
-        <button className="side-btn" title={vi.sidebar.settings} onClick={onSettings}>
+        <button
+          className="side-btn has-dot"
+          title={state.update.status === 'none' ? vi.sidebar.settings : vi.sidebar.settingsUpdate}
+          onClick={onSettings}
+        >
           ⚙
+          {state.update.status !== 'none' && <span className="update-dot" aria-hidden="true" />}
         </button>
       </div>
     </nav>
