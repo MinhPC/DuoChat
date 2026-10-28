@@ -3,15 +3,26 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # Build lại release cho một tag đã có (ví dụ khi release cũ thiếu file).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag cần build lại, ví dụ v0.1.4'
+        required: true
 
 permissions:
   contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
 
 jobs:
   release:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -24,8 +35,34 @@ jobs:
         shell: bash
         run: |
           v="$(node -p "require('./package.json').version")"
-          [ "refs/tags/v$v" = "$GITHUB_REF" ] || { echo "Tag $GITHUB_REF không khớp version $v"; exit 1; }
+          [ "$RELEASE_TAG" = "v$v" ] || { echo "Tag $RELEASE_TAG không khớp version $v"; exit 1; }
       - run: npm run build
-      - run: npx electron-builder --win --x64 --publish always
+      # Chỉ build, không để electron-builder tự tạo release: nó tải file song song nên
+      # có thể tạo ra hai release trùng tag, một bên thiếu latest.yml làm hỏng tự cập nhật.
+      - run: npx electron-builder --win --x64 --publish never
+      # Dọn một lần: v0.1.4 bị tạo trùng, bản thừa chỉ có file .blockmap (không có latest.yml). Xóa xong thì bỏ bước này.
+      - name: Xóa release thừa của v0.1.4
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq '.[] | select(.tag_name == "v0.1.4") | select(any(.assets[]; .name == "latest.yml") | not) | .id'); do
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+          done
+      - name: Đăng release (một release duy nhất, đủ file)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in "dist/DuoChat-Setup-${RELEASE_TAG#v}.exe" "dist/DuoChat-Setup-${RELEASE_TAG#v}.exe.blockmap" "dist/DuoChat-${RELEASE_TAG#v}.exe" dist/latest.yml; do
+            [ -f "$f" ] || { echo "Thiếu file $f"; exit 1; }
+          done
+          # Xóa mọi release đang dùng tag này (kể cả bản trùng). Tag git được giữ nguyên.
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | .id"); do
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+          done
+          gh release create "$RELEASE_TAG" --verify-tag --title "${RELEASE_TAG#v}" --generate-notes \
+            "dist/DuoChat-Setup-${RELEASE_TAG#v}.exe" \
+            "dist/DuoChat-Setup-${RELEASE_TAG#v}.exe.blockmap" \
+            "dist/DuoChat-${RELEASE_TAG#v}.exe" \
+            dist/latest.yml

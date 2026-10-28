@@ -11,11 +11,15 @@ win:
   target:
     - { target: nsis, arch: [x64] }
     - { target: portable, arch: [x64] }
+portable:
+  artifactName: DuoChat-${version}.${ext}
 publish:
   - provider: github
     owner: MinhPC
     repo: DuoChat
     releaseType: release
 nsis:
+  # Tên không có dấu cách, khớp với `url` trong latest.yml (GitHub đổi dấu cách khi tải lên nên sẽ lệch).
+  artifactName: DuoChat-Setup-${version}.${ext}
   oneClick: false
   allowToChangeInstallationDirectory: true
