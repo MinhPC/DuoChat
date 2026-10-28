@@ -15,7 +15,7 @@ import { SettingsStore } from './store'
 import { ToastManager } from './toast'
 import { resolvePreview } from './toastModel'
 import { AppTray } from './tray'
-import { createMainWindow } from './window'
+import { createMainWindow, showMainWindow } from './window'
 
 const isDev = !app.isPackaged
 
@@ -31,8 +31,7 @@ function showWindow(): void {
   const win = mainWindow
   if (!win || win.isDestroyed()) return
   if (win.isMinimized()) win.restore()
-  win.show()
-  win.focus()
+  showMainWindow(win)
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -221,7 +220,8 @@ function start(): void {
 
   const startHidden = process.argv.includes('--hidden') && store.get().startMinimized
   win.once('ready-to-show', () => {
-    if (!startHidden) win.show()
+    // Có thể người dùng đã mở từ tray/single-instance trước đó thì không hiện lại.
+    if (!startHidden && !win.isVisible()) showMainWindow(win)
   })
 
   applyLoginItem()

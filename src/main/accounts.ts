@@ -79,6 +79,7 @@ export class AccountManager {
   private overlayOpen = false
   private dragging = false
   private narrowWarned = false
+  private lastLayoutSignature = ''
   private locked = false
   private pinFailures = 0
   private retryUntil = 0
@@ -385,7 +386,8 @@ export class AccountManager {
 
   // ---------- layout ----------
 
-  private applyLayout(): void {
+  /** Trả về false nếu bounds/hiển thị của mọi view y hệt lần trước (bỏ qua setBounds thừa). */
+  private applyLayout(): boolean {
     const s = this.store.get()
     const [w, h] = this.win.getContentSize()
     const L = computeLayout({
@@ -395,7 +397,8 @@ export class AccountManager {
       splitRatio: s.layout.splitRatio,
     })
     const hidden = this.overlayOpen || this.dragging || this.locked
-    for (const [id, view] of this.views) {
+    const rects = new Map<string, Rect | null>()
+    for (const id of this.views.keys()) {
       let rect: Rect | null = null
       if (!hidden) {
         if (s.layout.mode === 'single') {
@@ -406,6 +409,13 @@ export class AccountManager {
           rect = L.views.right
         }
       }
+      rects.set(id, rect)
+    }
+    const signature = JSON.stringify([...rects])
+    const changed = signature !== this.lastLayoutSignature
+    this.lastLayoutSignature = signature
+    for (const [id, view] of changed ? this.views : []) {
+      const rect = rects.get(id) ?? null
       if (rect) {
         view.setBounds(rect)
         view.setVisible(true)
@@ -417,12 +427,12 @@ export class AccountManager {
       this.narrowWarned = true
       for (const cb of this.noticeListeners) cb('narrowScreen')
     }
+    return changed
   }
 
-  /** Gọi khi cửa sổ đổi kích thước / DPI. */
+  /** Gọi khi cửa sổ đổi kích thước / DPI. Sự kiện resize/maximize/show đến dồn dập nên bỏ qua khi không có gì đổi. */
   relayout(): void {
-    this.applyLayout()
-    this.emit()
+    if (this.applyLayout()) this.emit()
   }
 
   focusActiveView(): void {
