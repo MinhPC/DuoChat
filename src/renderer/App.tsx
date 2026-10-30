@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AppState } from '../shared/ipc'
 import { vi } from '../shared/i18n/vi'
+import { ACCOUNT_PALETTE } from '../shared/types'
 import { AccountDialog } from './components/AccountDialog'
 import { DndDialog } from './components/DndDialog'
 import { LockScreen } from './components/LockScreen'
@@ -9,7 +10,6 @@ import { Sidebar } from './components/Sidebar'
 import { Stage } from './components/Stage'
 
 type Dialog =
-  | { kind: 'add' }
   | { kind: 'rename'; accountId: string }
   | { kind: 'dnd'; accountId: string }
   | { kind: 'settings' }
@@ -55,13 +55,14 @@ export function App(): React.JSX.Element | null {
     <div className="app">
       <Sidebar
         state={state}
-        onAdd={() => setDialog({ kind: 'add' })}
+        onAdd={() => {
+          // Thêm thẳng để hiện QR đăng nhập; tên và ảnh tự lấy từ Zalo sau khi đăng nhập.
+          const color = ACCOUNT_PALETTE[state.accounts.length % ACCOUNT_PALETTE.length]
+          void window.duochat.addAccount({ name: 'Tài khoản', color })
+        }}
         onSettings={() => setDialog({ kind: 'settings' })}
       />
       <Stage state={state} />
-      {dialog?.kind === 'add' && (
-        <AccountDialog mode="add" accountCount={state.accounts.length} onClose={closeDialog} />
-      )}
       {dialog?.kind === 'rename' && (
         <AccountDialog
           mode="rename"

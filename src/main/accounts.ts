@@ -16,6 +16,7 @@ import {
   ACCOUNT_PALETTE,
   MAX_ZOOM,
   MIN_ZOOM,
+  SOFT_ACCOUNT_LIMIT,
   type Account,
   type DndSchedule,
   type LayoutSettings,
@@ -539,6 +540,9 @@ export class AccountManager {
     this.pendingFirstSync.add(account.id)
     this.createView(account)
     this.select(account.id, { swapIfOther: true })
+    if (s.accounts.length >= SOFT_ACCOUNT_LIMIT) {
+      for (const cb of this.noticeListeners) cb('accountLimit')
+    }
     return account
   }
 

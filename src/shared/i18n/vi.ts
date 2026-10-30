@@ -103,6 +103,8 @@ export const vi = {
   },
   notice: {
     narrowScreen: 'Màn hình hẹp, Zalo Web có thể bị chật.',
+    accountLimit:
+      'Bạn đang có từ 6 tài khoản trở lên. Mỗi tài khoản tốn khoảng 200–400 MB RAM, máy có thể bị chậm.',
     profileNotLoggedIn: 'Tài khoản chưa đăng nhập, hãy đăng nhập Zalo trước.',
     profileNotFound:
       'Không đọc được hồ sơ từ Zalo Web. Tên và màu vẫn giữ nguyên, bạn có thể tự đặt.',

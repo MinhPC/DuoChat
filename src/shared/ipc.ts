@@ -50,6 +50,7 @@ export type Prefs = Pick<
 
 export type NoticeKey =
   | 'narrowScreen'
+  | 'accountLimit'
   | 'updateReady'
   | 'profileNotLoggedIn'
   | 'profileNotFound'
