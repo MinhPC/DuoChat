@@ -5,7 +5,13 @@ import { describe, expect, it } from 'vitest'
 import { cleanupOrphanPartitions, partitionDir } from '../src/main/cleanup'
 import { formatNotificationTitle, parseNotifyPayload } from '../src/main/notifyPayload'
 import { isPermissionAllowed } from '../src/main/permissions'
-import { buildUserAgent, isAllowedUrl, isExternalOpenable, partitionFor } from '../src/main/service'
+import {
+  buildUserAgent,
+  isAllowedUrl,
+  isExternalOpenable,
+  isMapUrl,
+  partitionFor,
+} from '../src/main/service'
 import { matchShortcut, type KeyInput } from '../src/main/shortcuts'
 
 const key = (k: string, over: Partial<KeyInput> = {}): KeyInput => ({
@@ -54,6 +60,27 @@ describe('service allowlist', () => {
 
   it('partition có tiền tố persist:acc-', () => {
     expect(partitionFor('abc')).toBe('persist:acc-abc')
+  })
+})
+
+describe('link bản đồ (vị trí)', () => {
+  it('nhận Google Maps và OpenStreetMap qua https', () => {
+    expect(isMapUrl('https://maps.google.com/?q=10.77,106.70')).toBe(true)
+    expect(isMapUrl('https://www.google.com/maps?q=10.77,106.70')).toBe(true)
+    expect(isMapUrl('https://www.google.com.vn/maps/place/x')).toBe(true)
+    expect(
+      isMapUrl(
+        'https://www.google.com/maps/embed?origin=mfe&pb=!1m10!1m8!1m3!1d30704.646438190259!2d108.009938!3d15.8523439!3m2!1i1024!2i768!4f13.1!6i14',
+      ),
+    ).toBe(true) // dạng Zalo thực tế gửi
+    expect(isMapUrl('https://maps.app.goo.gl/abc')).toBe(true)
+    expect(isMapUrl('https://www.openstreetmap.org/?mlat=1&mlon=2')).toBe(true)
+  })
+  it('từ chối http, domain lạ và trang Google không phải bản đồ', () => {
+    expect(isMapUrl('http://maps.google.com/?q=1,2')).toBe(false)
+    expect(isMapUrl('https://www.google.com/search?q=maps')).toBe(false)
+    expect(isMapUrl('https://evil.com/maps')).toBe(false)
+    expect(isMapUrl('https://maps.google.com.evil.com/')).toBe(false)
   })
 })
 

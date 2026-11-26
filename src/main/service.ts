@@ -34,6 +34,34 @@ export function isAllowedUrl(url: string, svc: ServiceDefinition = ZALO_SERVICE)
   }
 }
 
+/**
+ * Phiên riêng, chỉ trong bộ nhớ (không có `persist:`), cho cửa sổ xem vị trí. Tách khỏi partition của
+ * account để Google/OSM không thấy cookie Zalo, và không lưu gì xuống đĩa.
+ */
+export const MAP_PARTITION = 'map-viewer'
+
+const MAP_HOSTS = new Set([
+  'maps.google.com',
+  'maps.app.goo.gl',
+  'consent.google.com', // trang đồng ý cookie Google, có thể chen giữa khi mở bản đồ
+  'openstreetmap.org',
+  'www.openstreetmap.org',
+])
+const GOOGLE_HOSTS = /^(www\.)?google\.com(\.[a-z]{2})?$/i
+
+/** Link bản đồ (vị trí gửi trong chat): Google Maps hoặc OpenStreetMap, chỉ https. */
+export function isMapUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'https:') return false
+    const h = u.hostname.toLowerCase()
+    if (MAP_HOSTS.has(h)) return true
+    return (GOOGLE_HOSTS.test(h) || h === 'goo.gl') && /^\/maps(\/|$)/.test(u.pathname)
+  } catch {
+    return false
+  }
+}
+
 export function isExternalOpenable(url: string): boolean {
   try {
     const p = new URL(url).protocol

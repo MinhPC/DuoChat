@@ -653,11 +653,31 @@ export class AccountManager {
     const view = this.views.get(id)
     if (!view) return
     const ses = session.fromPartition(partitionFor(id))
+    // Dừng trang Zalo trước khi xóa, để nó không kịp ghi lại token vào storage rồi "sống lại" sau reload.
+    const wc = view.webContents
+    if (!wc.isDestroyed()) {
+      try {
+        await wc.loadURL('about:blank')
+      } catch {
+        /* điều hướng bị hủy: vẫn tiếp tục xóa */
+      }
+    }
     await ses.clearStorageData()
     await ses.clearCache()
     this.unread.set(id, emptyTracking())
     this.forgetLoggedIn(id) // đăng xuất chủ động không phải "phiên hết hạn"
-    if (!view.webContents.isDestroyed()) void view.webContents.loadURL(ZALO_SERVICE.url)
+    // Zalo kế tiếp đăng nhập vào slot này có thể là người khác: bỏ ảnh và tên Zalo cũ.
+    this.store.update((s) => ({
+      ...s,
+      accounts: s.accounts.map((a) => {
+        if (a.id !== id) return a
+        const next = { ...a }
+        delete next.avatar
+        delete next.profileName
+        return next
+      }),
+    }))
+    if (!wc.isDestroyed()) void wc.loadURL(ZALO_SERVICE.url)
     this.emit()
   }
 

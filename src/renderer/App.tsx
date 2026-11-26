@@ -36,10 +36,10 @@ export function App(): React.JSX.Element | null {
     }
   }, [])
 
-  // Dialog nằm trong shell nên bị các view Zalo che mất: báo main ẩn view khi có dialog.
+  // Dialog và toast nằm trong shell nên bị các view Zalo che mất: báo main ẩn view khi đang hiện.
   useEffect(() => {
-    void window.duochat.setOverlay(dialog !== null)
-  }, [dialog])
+    void window.duochat.setOverlay(dialog !== null || toast !== null)
+  }, [dialog, toast])
 
   useEffect(() => {
     if (!toast) return

@@ -217,31 +217,56 @@ export function normalizeSettings(input: Json): Settings {
   }
 }
 
+/** Đọc và migrate một file; ném lỗi nếu không đọc được hoặc JSON hỏng. */
+function readAndMigrate(file: string): Settings {
+  return migrate(JSON.parse(fs.readFileSync(file, 'utf8')))
+}
+
 export function readSettingsFile(file: string): Settings {
-  let text: string
+  const bak = `${file}.bak`
+  let err: unknown
   try {
-    text = fs.readFileSync(file, 'utf8')
-  } catch {
-    return defaultSettings()
+    return readAndMigrate(file)
+  } catch (e) {
+    err = e
   }
-  try {
-    return migrate(JSON.parse(text))
-  } catch {
-    // File hỏng: giữ lại bản sao để người dùng cứu dữ liệu rồi bắt đầu lại.
+  // Chưa có file (lần chạy đầu) và cũng chưa có bản sao: bắt đầu mới.
+  if ((err as NodeJS.ErrnoException).code === 'ENOENT' && !fs.existsSync(bak)) return defaultSettings()
+
+  if (err instanceof SyntaxError) {
+    // File hỏng: giữ lại bản sao để người dùng cứu dữ liệu.
     try {
       fs.renameSync(file, `${file}.corrupt-${Date.now()}`)
     } catch {
       /* bỏ qua */
     }
+  }
+  // Hỏng, thiếu hoặc bị khóa tạm: thử bản sao lưu gần nhất trước khi bỏ cuộc.
+  try {
+    return readAndMigrate(bak)
+  } catch {
     return defaultSettings()
   }
 }
 
-/** Ghi atomic: ghi file tạm cùng thư mục rồi rename. */
+/** Ghi atomic: ghi file tạm cùng thư mục, fsync, giữ bản .bak rồi rename. */
 export function writeSettingsFile(file: string, settings: Settings): void {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   const tmp = `${file}.${process.pid}.tmp`
-  fs.writeFileSync(tmp, JSON.stringify(settings, null, 2), 'utf8')
+  const fd = fs.openSync(tmp, 'w')
+  try {
+    fs.writeFileSync(fd, JSON.stringify(settings, null, 2), 'utf8')
+    fs.fsyncSync(fd)
+  } finally {
+    fs.closeSync(fd)
+  }
+  // Bản tốt hiện tại thành .bak (chỉ khi nó còn đọc được, tránh chép file hỏng đè bản sao tốt).
+  try {
+    JSON.parse(fs.readFileSync(file, 'utf8'))
+    fs.copyFileSync(file, `${file}.bak`)
+  } catch {
+    /* chưa có file hoặc file hỏng: giữ nguyên .bak cũ */
+  }
   fs.renameSync(tmp, file)
 }
 
@@ -284,6 +309,13 @@ export class SettingsStore {
 
   private schedule(): void {
     if (this.timer) clearTimeout(this.timer)
-    this.timer = setTimeout(() => this.flush(), this.debounceMs)
+    this.timer = setTimeout(() => {
+      try {
+        this.flush()
+      } catch {
+        // Ghi lỗi tạm thời (EPERM/EBUSY): thử lại sau, không để thành uncaught exception.
+        this.schedule()
+      }
+    }, this.debounceMs)
   }
 }

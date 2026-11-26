@@ -220,11 +220,18 @@ function start(): void {
     toasts.dismissAll()
     if (flushed) return
     e.preventDefault()
-    void Promise.race([manager.flushAll(), new Promise((r) => setTimeout(r, 3000))]).finally(() => {
-      store.flush()
-      flushed = true
-      app.quit()
-    })
+    void Promise.race([manager.flushAll(), new Promise((r) => setTimeout(r, 3000))])
+      .catch(() => undefined)
+      .finally(() => {
+        // flush có thể throw (EPERM/EBUSY do antivirus, đĩa đầy): vẫn phải thoát được.
+        try {
+          store.flush()
+        } catch {
+          log.info('settings_flush_failed')
+        }
+        flushed = true
+        app.quit()
+      })
   })
 
   // ---- nạp giao diện ----
